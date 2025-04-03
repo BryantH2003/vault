@@ -253,11 +253,14 @@ class DatabaseService: ObservableObject {
         try await db.collection("outstandingPayments").document().setData(from: payment)
     }
     
-    func updateOutstandingPayment(_ payment: OutstandingPayment) async throws {
+    func updateOutstandingPayment(_ payment: OutstandingPayment, newAmount: Double) async throws {
         guard let documentId = payment.id else {
             throw DatabaseError.invalidDocumentId
         }
-        try await db.collection("outstandingPayments").document(documentId).setData(from: payment)
+        var updatedPayment = payment
+        updatedPayment.paidAmount = newAmount
+        updatedPayment.updatedAt = Date()
+        try await db.collection("outstandingPayments").document(documentId).setData(from: updatedPayment)
     }
     
     func deleteOutstandingPayment(_ paymentId: String) async throws {

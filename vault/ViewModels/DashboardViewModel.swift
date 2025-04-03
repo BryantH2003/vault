@@ -1,65 +1,60 @@
 import Foundation
-import SwiftUI
+import FirebaseFirestore
 
-@MainActor
 class DashboardViewModel: ObservableObject {
     @Published var selectedDate = Date()
-    @Published var showingDatePicker = false
-    @Published var outstandingPayments: [OutstandingPayment] = []
     @Published var isLoading = false
     @Published var error: Error?
-    @Published var spent: Double = 0
-    @Published var saved: Double = 0
-    @Published var previousSpent: Double = 0
-    @Published var previousSaved: Double = 0
-    @Published var recentExpenses: [Expense] = []
+    
+    let monthlyOverviewViewModel: MonthlyOverviewViewModel
+    let outstandingPaymentsViewModel: OutstandingPaymentsViewModel
+    let recentExpensesViewModel: RecentExpensesViewModel
+    let savingsViewModel: SavingsViewModel
     
     private let databaseService: DatabaseService
     private let userId: String
     
-    init(databaseService: DatabaseService = DatabaseService(), userId: String) {
+    init(databaseService: DatabaseService, userId: String) {
         self.databaseService = databaseService
         self.userId = userId
+        
+        self.monthlyOverviewViewModel = MonthlyOverviewViewModel(databaseService: databaseService)
+        self.outstandingPaymentsViewModel = OutstandingPaymentsViewModel(databaseService: databaseService)
+        self.recentExpensesViewModel = RecentExpensesViewModel(databaseService: databaseService)
+        self.savingsViewModel = SavingsViewModel(databaseService: databaseService)
     }
     
-    @MainActor
-    func loadMonthlyOverview() async {
+    func loadDashboardData() {
         isLoading = true
         error = nil
         
-        do {
-            let calendar = Calendar.current
-            let components = calendar.dateComponents([.year, .month], from: selectedDate)
-            guard let startOfMonth = calendar.date(from: components),
-                  let endOfMonth = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: startOfMonth) else {
-                throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid date"])
+        Task {
+            do {
+                // Load data from each view model
+                monthlyOverviewViewModel.loadMonthlyOverview(for: userId, date: selectedDate)
+                outstandingPaymentsViewModel.loadOutstandingPayments(for: userId)
+                recentExpensesViewModel.loadRecentExpenses(for: userId)
+                savingsViewModel.loadSavings(for: userId)
+                
+                // Wait for all operations to complete
+                try await Task.sleep(nanoseconds: 1_000_000_000) // 1 second delay to allow data to load
+                
+                await MainActor.run {
+                    self.isLoading = false
+                }
+            } catch {
+                await MainActor.run {
+                    self.error = error
+                    self.isLoading = false
+                }
             }
-            
-            async let overviewTask = databaseService.getMonthlyOverview(for: userId, date: selectedDate)
-            async let paymentsTask = databaseService.getOutstandingPayments(for: userId)
-            async let expensesTask = databaseService.getExpenses(for: userId, in: startOfMonth...endOfMonth)
-            
-            let (overview, payments, expenses) = try await (overviewTask, paymentsTask, expensesTask)
-            
-            (self.spent, self.saved, self.previousSpent, self.previousSaved) = overview
-            self.outstandingPayments = payments
-            // Sort expenses by date in descending order and take the first 10
-            self.recentExpenses = expenses
-                .sorted { $0.date > $1.date }
-                .prefix(10)
-                .map { $0 }
-            
-            isLoading = false
-        } catch {
-            self.error = error
-            isLoading = false
         }
     }
     
-    func updateSelectedDate(_ date: Date) {
+    func updateDate(_ date: Date) {
         selectedDate = date
-        Task {
-            await loadMonthlyOverview()
-        }
+        monthlyOverviewViewModel.loadMonthlyOverview(for: userId, date: date)
+        recentExpensesViewModel.updateSelectedDate(date)
+        loadDashboardData()
     }
 } 
