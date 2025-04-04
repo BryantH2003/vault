@@ -5,7 +5,7 @@ struct DebugView: View {
     @State private var alertMessage = ""
     @State private var isLoading = false
     
-    private let databaseService = CoreDataService.shared
+    private let databaseService = FirebaseService.shared
     private let debugDatabaseService = DebugService.shared
     
     var body: some View {
@@ -68,23 +68,13 @@ struct DebugView: View {
         
         Task {
             do {
-                // Create dummy data
+                // Create dummy user first
                 let user = try await createDummyUser()
-                let categories = try await createDummyCategories()
-                let expenses = try await createDummyExpenses(for: user.id, categories: categories)
-                let incomes = try await createDummyIncomes(for: user.id)
-                let budgets = try await createDummyBudgets(for: user.id, categories: categories)
-                let savingsGoals = try await createDummySavingsGoals(for: user.id)
                 
-                alertMessage = """
-                    Database populated with:
-                    - 1 user
-                    - \(categories.count) categories
-                    - \(expenses.count) expenses
-                    - \(incomes.count) incomes
-                    - \(budgets.count) budgets
-                    - \(savingsGoals.count) savings goals
-                    """
+                // Use DebugService to populate the rest of the data
+                try await debugDatabaseService.populateDummyData(for: user.id)
+                
+                alertMessage = "Database populated successfully with dummy data"
                 showingAlert = true
             } catch {
                 alertMessage = "Error populating database: \(error.localizedDescription)"
@@ -218,7 +208,7 @@ struct DatabaseStatsView: View {
     @State private var stats: [String: Int] = [:]
     @State private var isLoading = true
     
-    private let databaseService = CoreDataService.shared
+    private let databaseService = FirebaseService.shared
     
     var body: some View {
         List {

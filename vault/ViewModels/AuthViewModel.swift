@@ -21,7 +21,7 @@ class AuthViewModel: ObservableObject {
     @Published var isDatabaseResetting = false
     
     private let auth = Auth.auth()
-    private let coreDataService = CoreDataService.shared
+    private let databaseService = FirebaseService.shared
     private let debugDataService = DebugService.shared
     
     init() {
@@ -112,7 +112,7 @@ class AuthViewModel: ObservableObject {
         let userId = createDeterministicUUID(from: firebaseUser.uid)
         
         // Try to get existing user
-        if let existingUser = try? await coreDataService.getUser(id: userId) {
+        if let existingUser = try? await databaseService.getUser(id: userId) {
             // Update existing user
             let updatedUser = User(
                 id: existingUser.id,
@@ -131,7 +131,7 @@ class AuthViewModel: ObservableObject {
                 createdAt: existingUser.createdAt,
                 updatedAt: Date()
             )
-            self.user = try await coreDataService.updateUser(updatedUser)
+            self.user = try await databaseService.updateUser(updatedUser)
         } else {
             // Create new user
             let newUser = User(
@@ -151,7 +151,7 @@ class AuthViewModel: ObservableObject {
                 createdAt: Date(),
                 updatedAt: Date()
             )
-            self.user = try await coreDataService.createUser(newUser)
+            self.user = try await databaseService.createUser(newUser)
         }
         
         self.isAuthenticated = true
@@ -160,7 +160,7 @@ class AuthViewModel: ObservableObject {
     private func fetchUser(firebaseUID: String) async {
         do {
             let userId = createDeterministicUUID(from: firebaseUID)
-            if let user = try await coreDataService.getUser(id: userId) {
+            if let user = try await databaseService.getUser(id: userId) {
                 self.user = user
                 self.isAuthenticated = true
             } else {

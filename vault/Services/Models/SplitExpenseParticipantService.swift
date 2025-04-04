@@ -6,60 +6,81 @@
 //
 
 import Foundation
-import CoreData
+import FirebaseFirestore
 
-/// Service for managing Split Expense Participant entities
-class SplitExpenseParticipantService: BaseCoreDataService<SplitExpenseParticipantEntity, SplitExpenseParticipant> {
-    static let shared = SplitExpenseParticipantService(container: CoreDataService.shared.container, entityName: "SplitExpenseParticipantEntity")
+/// Service for managing SplitExpenseParticipant entities
+class SplitExpenseParticipantService {
+    static let shared = SplitExpenseParticipantService()
+    private let db = Firestore.firestore()
     
-    override func mapModelToEntity(_ model: SplitExpenseParticipant, _ entity: SplitExpenseParticipantEntity) async throws {
-        entity.id = model.id
-        entity.splitID = model.splitID
-        entity.userID = model.userID
-        entity.amountDue = model.amountDue
-        entity.status = model.status
+    private func documentReference(for id: UUID) -> DocumentReference {
+        return db.collection("splitExpenseParticipants").document(id.uuidString)
     }
     
-    override func mapEntityToModel(_ entity: SplitExpenseParticipantEntity) async throws -> SplitExpenseParticipant {
-        guard let id = entity.id,
-              let splitID = entity.splitID,
-              let userID = entity.userID,
-              let status = entity.status else {
-            throw NSError(domain: "SplitExpenseParticipantService", code: 400, userInfo: [NSLocalizedDescriptionKey: "Invalid entity data"])
-        }
-        
-        return SplitExpenseParticipant(
-            id: id,
-            splitID: splitID,
-            userID: userID,
-            amountDue: entity.amountDue,
-            status: status
-        )
+    func createParticipant(_ participant: SplitExpenseParticipant) async throws -> SplitExpenseParticipant {
+        let docRef = documentReference(for: participant.id)
+        try docRef.setData(from: participant)
+        return participant
     }
     
-    /// Get participants for a split expense
-    func getForSplit(_ splitID: UUID) async throws -> [SplitExpenseParticipant] {
-        let predicate = NSPredicate(format: "splitID == %@", splitID as CVarArg)
-        return try await getAllWithPredicate(predicate)
+    func getParticipant(id: UUID) async throws -> SplitExpenseParticipant? {
+        let docRef = documentReference(for: id)
+        let document = try await docRef.getDocument()
+        return try? document.data(as: SplitExpenseParticipant.self)
     }
     
-    /// Get all split expenses where a user is a participant
-    func getForUser(_ userID: UUID) async throws -> [SplitExpenseParticipant] {
-        let predicate = NSPredicate(format: "userID == %@", userID as CVarArg)
-        return try await getAllWithPredicate(predicate)
+    func getParticipants(forExpenseID: UUID) async throws -> [SplitExpenseParticipant] {
+        let snapshot = try await db.collection("splitExpenseParticipants")
+            .whereField("expenseID", isEqualTo: forExpenseID.uuidString)
+            .getDocuments()
+        return try snapshot.documents.compactMap { try $0.data(as: SplitExpenseParticipant.self) }
     }
     
-    /// Get pending split expenses for a user
-    func getPendingForUser(_ userID: UUID) async throws -> [SplitExpenseParticipant] {
-        let predicate = NSPredicate(format: "userID == %@ AND status == %@", 
-                                  userID as CVarArg,
-                                  "pending" as CVarArg)
-        return try await getAllWithPredicate(predicate)
+    func getParticipants(forUserID: UUID) async throws -> [SplitExpenseParticipant] {
+        let snapshot = try await db.collection("splitExpenseParticipants")
+            .whereField("userID", isEqualTo: forUserID.uuidString)
+            .getDocuments()
+        return try snapshot.documents.compactMap { try $0.data(as: SplitExpenseParticipant.self) }
     }
     
-    /// Get all participants for a split expense
-    func getSplitExpenseParticipants(forSplitID: UUID) async throws -> [SplitExpenseParticipant] {
-        return try await getForSplit(forSplitID)
+    func getAllParticipants() async throws -> [SplitExpenseParticipant] {
+        let snapshot = try await db.collection("splitExpenseParticipants").getDocuments()
+        return try snapshot.documents.compactMap { try $0.data(as: SplitExpenseParticipant.self) }
+    }
+    
+    func updateParticipant(_ participant: SplitExpenseParticipant) async throws -> SplitExpenseParticipant {
+        let docRef = documentReference(for: participant.id)
+        try docRef.setData(from: participant, merge: true)
+        return participant
+    }
+    
+    func deleteParticipant(id: UUID) async throws {
+        let docRef = documentReference(for: id)
+        try await docRef.delete()
+    }
+    
+    /// Get unpaid participants for an expense
+    func getUnpaidParticipants(forExpenseID: UUID) async throws -> [SplitExpenseParticipant] {
+        let snapshot = try await db.collection("splitExpenseParticipants")
+            .whereField("expenseID", isEqualTo: forExpenseID.uuidString)
+            .whereField("hasPaid", isEqualTo: false)
+            .getDocuments()
+        return try snapshot.documents.compactMap { try $0.data(as: SplitExpenseParticipant.self) }
+    }
+    
+    /// Get paid participants for an expense
+    func getPaidParticipants(forExpenseID: UUID) async throws -> [SplitExpenseParticipant] {
+        let snapshot = try await db.collection("splitExpenseParticipants")
+            .whereField("expenseID", isEqualTo: forExpenseID.uuidString)
+            .whereField("hasPaid", isEqualTo: true)
+            .getDocuments()
+        return try snapshot.documents.compactMap { try $0.data(as: SplitExpenseParticipant.self) }
+    }
+    
+    /// Get total amount paid for an expense
+    func getTotalAmountPaid(forExpenseID: UUID) async throws -> Double {
+        let paidParticipants = try await getPaidParticipants(forExpenseID: forExpenseID)
+        return paidParticipants.reduce(into: 0) { $0 + $1.amountDue }
     }
 }
 

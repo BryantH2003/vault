@@ -6,61 +6,66 @@
 //
 
 import Foundation
-import CoreData
+import FirebaseFirestore
 
-/// Service for managing Friendship entities
-class FriendsService: BaseCoreDataService<FriendshipEntity, Friendship> {
-    static let shared = FriendsService(container: CoreDataService.shared.container, entityName: "FriendshipEntity")
+/// Service for managing Friend relationships
+class FriendsService {
+    static let shared = FriendsService()
+    private let db = Firestore.firestore()
     
-    override func mapModelToEntity(_ model: Friendship, _ entity: FriendshipEntity) async throws {
-        entity.id = model.id
-        entity.user1ID = model.user1ID
-        entity.user2ID = model.user2ID
-        entity.status = model.status
-        entity.actionUserID = model.actionUserID
+    private func documentReference(for id: UUID) -> DocumentReference {
+        return db.collection("friends").document(id.uuidString)
     }
     
-    override func mapEntityToModel(_ entity: FriendshipEntity) async throws -> Friendship {
-        guard let id = entity.id,
-              let user1ID = entity.user1ID,
-              let user2ID = entity.user2ID,
-              let status = entity.status,
-              let actionUserID = entity.actionUserID else {
-            throw NSError(domain: "FriendsService", code: 400, userInfo: [NSLocalizedDescriptionKey: "Invalid entity data"])
-        }
+    func addFriend(userID: UUID, friendID: UUID) async throws {
+        let docRef = documentReference(for: UUID())
+        try await docRef.setData([
+            "userID": userID.uuidString,
+            "friendID": friendID.uuidString,
+            "createdAt": Date()
+        ])
+    }
+    
+    func removeFriend(userID: UUID, friendID: UUID) async throws {
+        let snapshot = try await db.collection("friends")
+            .whereField("userID", isEqualTo: userID.uuidString)
+            .whereField("friendID", isEqualTo: friendID.uuidString)
+            .getDocuments()
         
-        return Friendship(
-            id: id,
-            user1ID: user1ID,
-            user2ID: user2ID,
-            status: status,
-            actionUserID: actionUserID
-        )
+        for document in snapshot.documents {
+            try await document.reference.delete()
+        }
     }
     
-    /// Get all friendships for a user
-    func getForUser(_ userID: UUID) async throws -> [Friendship] {
-        let predicate = NSPredicate(format: "user1ID == %@ OR user2ID == %@", 
-                                  userID as CVarArg,
-                                  userID as CVarArg)
-        return try await getAllWithPredicate(predicate)
+    func getFriends(forUserID: UUID) async throws -> [User] {
+        let snapshot = try await db.collection("friends")
+            .whereField("userID", isEqualTo: forUserID.uuidString)
+            .getDocuments()
+        
+        var friends: [User] = []
+        for document in snapshot.documents {
+            if let friendID = UUID(uuidString: document.data()["friendID"] as? String ?? "") {
+                if let friend = try await UserService.shared.getUser(id: friendID) {
+                    friends.append(friend)
+                }
+            }
+        }
+        return friends
     }
     
-    /// Get pending friend requests for a user
-    func getPendingRequests(_ userID: UUID) async throws -> [Friendship] {
-        let predicate = NSPredicate(format: "(user1ID == %@ OR user2ID == %@) AND status == %@", 
-                                  userID as CVarArg,
-                                  userID as CVarArg,
-                                  "pending" as CVarArg)
-        return try await getAllWithPredicate(predicate)
+    func isFriend(userID: UUID, friendID: UUID) async throws -> Bool {
+        let snapshot = try await db.collection("friends")
+            .whereField("userID", isEqualTo: userID.uuidString)
+            .whereField("friendID", isEqualTo: friendID.uuidString)
+            .getDocuments()
+        return !snapshot.documents.isEmpty
     }
     
-    /// Get active friendships for a user
-    func getActiveFriendships(_ userID: UUID) async throws -> [Friendship] {
-        let predicate = NSPredicate(format: "(user1ID == %@ OR user2ID == %@) AND status == %@", 
-                                  userID as CVarArg,
-                                  userID as CVarArg,
-                                  "active" as CVarArg)
-        return try await getAllWithPredicate(predicate)
+    func getMutualFriends(userID1: UUID, userID2: UUID) async throws -> [User] {
+        let friends1 = try await getFriends(forUserID: userID1)
+        let friends2 = try await getFriends(forUserID: userID2)
+        
+        let friends1IDs = Set(friends1.map { $0.id })
+        return friends2.filter { friends1IDs.contains($0.id) }
     }
 }
