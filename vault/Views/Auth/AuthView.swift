@@ -1,3 +1,11 @@
+//
+//  AuthView.swift
+//  vault
+//
+//  Created by Bryant Huynh on 4/3/25.
+//
+
+
 import SwiftUI
 
 struct AuthView: View {
@@ -118,4 +126,4 @@ struct AuthView: View {
 #Preview {
     AuthView()
         .environmentObject(AuthViewModel())
-} 
+}
