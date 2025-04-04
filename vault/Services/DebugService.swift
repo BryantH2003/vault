@@ -1,37 +1,51 @@
 import Foundation
-import CoreData
+import FirebaseFirestore
 
 class DebugService {
     static let shared = DebugService()
-    private let coreDataService = CoreDataService.shared
+    private let databaseService = FirebaseService.shared
+    private let db = Firestore.firestore()
     
     func clearDatabase() async throws {
-        let context = coreDataService.container.viewContext
-        
-        // List of all entity names
-        let entityNames = [
-            "UserEntity",
-            "ExpenseEntity",
-            "FixedExpenseEntity",
-            "IncomeEntity",
-            "CategoryEntity",
-            "BudgetEntity",
-            "SavingsGoalEntity",
-            "FriendshipEntity",
-            "SharedDataSettingsEntity",
-            "SplitExpenseEntity",
-            "SplitExpenseParticipantEntity"
+        // List of all collections to clear
+        let collections = [
+            "users",
+            "expenses",
+            "fixedExpenses",
+            "incomes",
+            "categories",
+            "budgets",
+            "savingsGoals",
+            "friendships",
+            "sharedDataSettings",
+            "splitExpenses",
+            "splitExpenseParticipants"
         ]
         
-        // Delete all objects for each entity
-        for entityName in entityNames {
-            let fetchRequest: NSFetchRequest<NSFetchRequestResult> = NSFetchRequest(entityName: entityName)
-            let deleteRequest = NSBatchDeleteRequest(fetchRequest: fetchRequest)
-            
-            try context.execute(deleteRequest)
+        // Delete all documents in each collection
+        for collection in collections {
+            try await deleteCollection(collection)
         }
+    }
+    
+    private func deleteCollection(_ collectionPath: String) async throws {
+        let batchSize = 100
+        let collection = db.collection(collectionPath)
         
-        try context.save()
+        while true {
+            let query = collection.limit(to: batchSize)
+            let snapshot = try await query.getDocuments()
+            
+            if snapshot.documents.isEmpty {
+                break
+            }
+            
+            let batch = db.batch()
+            snapshot.documents.forEach { document in
+                batch.deleteDocument(document.reference)
+            }
+            try await batch.commit()
+        }
     }
     
     func populateDummyData(for userId: UUID) async throws {
@@ -71,7 +85,7 @@ class DebugService {
         return try await withThrowingTaskGroup(of: Category.self) { group in
             for category in categories {
                 group.addTask {
-                    try await self.coreDataService.createCategory(category)
+                    try await self.databaseService.createCategory(category)
                 }
             }
             
@@ -91,7 +105,7 @@ class DebugService {
         ]
         
         for expense in expenses {
-            try await coreDataService.createExpense(expense)
+            try await databaseService.createExpense(expense)
         }
     }
     
@@ -103,7 +117,7 @@ class DebugService {
         ]
         
         for fixedExpense in fixedExpenses {
-            try await coreDataService.createFixedExpense(fixedExpense)
+            try await databaseService.createFixedExpense(fixedExpense)
         }
     }
     
@@ -115,7 +129,7 @@ class DebugService {
         ]
         
         for income in incomes {
-            try await coreDataService.createIncome(income)
+            try await databaseService.createIncome(income)
         }
     }
     
@@ -129,7 +143,7 @@ class DebugService {
         ]
         
         for budget in budgets {
-            try await coreDataService.createBudget(budget)
+            try await databaseService.createBudget(budget)
         }
     }
     
@@ -141,7 +155,7 @@ class DebugService {
         ]
         
         for goal in savingsGoals {
-            try await coreDataService.createSavingsGoal(goal)
+            try await databaseService.createSavingsGoal(goal)
         }
     }
     
@@ -154,7 +168,7 @@ class DebugService {
         ]
         
         for (index, friendship) in friendships.enumerated() {
-            try await coreDataService.createFriendship(friendship)
+            try await databaseService.createFriendship(friendship)
             
             // Create shared data settings for accepted friendships
             if friendship.status == "accepted" {
@@ -166,7 +180,7 @@ class DebugService {
                     canViewSavings: index == 0,
                     canViewBudgets: index == 0
                 )
-                try await coreDataService.createSharedDataSettings(settings)
+                try await databaseService.createSharedDataSettings(settings)
             }
         }
     }
@@ -179,7 +193,7 @@ class DebugService {
         ]
         
         for splitExpense in splitExpenses {
-            let createdSplitExpense = try await coreDataService.createSplitExpense(splitExpense)
+            let createdSplitExpense = try await databaseService.createSplitExpense(splitExpense)
             
             // Create 2-3 participants for each split expense
             let participants = [
@@ -189,7 +203,7 @@ class DebugService {
             ]
             
             for participant in participants {
-                try await coreDataService.createSplitExpenseParticipant(participant)
+                try await databaseService.createSplitExpenseParticipant(participant)
             }
         }
     }

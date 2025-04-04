@@ -6,126 +6,118 @@
 //
 
 import Foundation
-import CoreData
+import FirebaseFirestore
 
-/// Service for managing Split Expense entities
-class SplitExpenseService: BaseCoreDataService<SplitExpenseEntity, SplitExpense> {
-    static let shared = SplitExpenseService(container: CoreDataService.shared.container, entityName: "SplitExpenseEntity")
+/// Service for managing SplitExpense entities
+class SplitExpenseService {
+    static let shared = SplitExpenseService()
+    private let db = Firestore.firestore()
     
-    override func mapModelToEntity(_ model: SplitExpense, _ entity: SplitExpenseEntity) async throws {
-        entity.id = model.id
-        entity.expenseDescription = model.expenseDescription
-        entity.totalAmount = model.totalAmount
-        entity.payerID = model.payerID
-        entity.creationDate = model.creationDate
+    private func documentReference(for id: UUID) -> DocumentReference {
+        return db.collection("splitExpenses").document(id.uuidString)
     }
     
-    override func mapEntityToModel(_ entity: SplitExpenseEntity) async throws -> SplitExpense {
-        guard let id = entity.id,
-              let payerID = entity.payerID,
-              let creationDate = entity.creationDate else {
-            throw NSError(domain: "SplitExpenseService", code: 400, userInfo: [NSLocalizedDescriptionKey: "Invalid entity data"])
-        }
-        
-        return SplitExpense(
-            id: id,
-            expenseDescription: entity.expenseDescription,
-            totalAmount: entity.totalAmount,
-            payerID: payerID,
-            creationDate: creationDate
-        )
-    }
-    
-    /// Get split expenses for a user
-    func getForUser(_ userID: UUID) async throws -> [SplitExpense] {
-        let predicate = NSPredicate(format: "payerID == %@", userID as CVarArg)
-        return try await getAllWithPredicate(predicate)
-    }
-    
-    // MARK: - Split Expense Operations
     func createSplitExpense(_ splitExpense: SplitExpense) async throws -> SplitExpense {
-        let context = container.viewContext
-        let splitExpenseEntity = SplitExpenseEntity(context: context)
-        splitExpenseEntity.id = splitExpense.id
-        splitExpenseEntity.expenseDescription = splitExpense.expenseDescription
-        splitExpenseEntity.totalAmount = splitExpense.totalAmount
-        splitExpenseEntity.payerID = splitExpense.payerID
-        splitExpenseEntity.creationDate = splitExpense.creationDate
-        
-        try context.save()
+        let docRef = documentReference(for: splitExpense.id)
+        try docRef.setData(from: splitExpense)
         return splitExpense
     }
     
     func getSplitExpense(id: UUID) async throws -> SplitExpense? {
-        let context = container.viewContext
-        let request = NSFetchRequest<SplitExpenseEntity>(entityName: "SplitExpenseEntity")
-        request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
-        
-        let result = try context.fetch(request)
-        guard let splitExpenseEntity = result.first else { return nil }
-        
-        return SplitExpense(
-            id: splitExpenseEntity.id ?? UUID(),
-            expenseDescription: splitExpenseEntity.expenseDescription,
-            totalAmount: splitExpenseEntity.totalAmount,
-            payerID: splitExpenseEntity.payerID ?? UUID(),
-            creationDate: splitExpenseEntity.creationDate ?? Date()
-        )
+        let docRef = documentReference(for: id)
+        let document = try await docRef.getDocument()
+        return try? document.data(as: SplitExpense.self)
     }
     
     func getSplitExpenses(forUserID: UUID) async throws -> [SplitExpense] {
-        let context = container.viewContext
-        let request = NSFetchRequest<SplitExpenseEntity>(entityName: "SplitExpenseEntity")
-        request.predicate = NSPredicate(format: "payerID == %@", forUserID as CVarArg)
-        
-        let result = try context.fetch(request)
-        return try result.compactMap { entity in
-            guard let id = entity.id,
-                  let payerID = entity.payerID,
-                  let creationDate = entity.creationDate else {
-                      throw NSError(domain: "CoreDataService", code: 404, userInfo: [NSLocalizedDescriptionKey: "Split Expense not found"])
-                  }
-            
-            return SplitExpense(
-                id: id,
-                expenseDescription: entity.expenseDescription,
-                totalAmount: entity.totalAmount,
-                payerID: payerID,
-                creationDate: creationDate
-            )
-        }
+        let snapshot = try await db.collection("splitExpenses")
+            .whereField("creatorID", isEqualTo: forUserID.uuidString)
+            .getDocuments()
+        return try snapshot.documents.compactMap { try $0.data(as: SplitExpense.self) }
+    }
+    
+    func getAllSplitExpenses() async throws -> [SplitExpense] {
+        let snapshot = try await db.collection("splitExpenses").getDocuments()
+        return try snapshot.documents.compactMap { try $0.data(as: SplitExpense.self) }
     }
     
     func updateSplitExpense(_ splitExpense: SplitExpense) async throws -> SplitExpense {
-        let context = container.viewContext
-        let request = NSFetchRequest<SplitExpenseEntity>(entityName: "SplitExpenseEntity")
-        request.predicate = NSPredicate(format: "id == %@", splitExpense.id as CVarArg)
-        
-        let result = try context.fetch(request)
-        guard let splitExpenseEntity = result.first else {
-            throw NSError(domain: "CoreDataService", code: 404, userInfo: [NSLocalizedDescriptionKey: "Split Expense not found"])
-        }
-        
-        splitExpenseEntity.expenseDescription = splitExpense.expenseDescription
-        splitExpenseEntity.totalAmount = splitExpense.totalAmount
-        splitExpenseEntity.payerID = splitExpense.payerID
-        splitExpenseEntity.creationDate = splitExpense.creationDate
-        
-        try context.save()
+        let docRef = documentReference(for: splitExpense.id)
+        try docRef.setData(from: splitExpense, merge: true)
         return splitExpense
     }
     
     func deleteSplitExpense(id: UUID) async throws {
-        let context = container.viewContext
-        let request = NSFetchRequest<SplitExpenseEntity>(entityName: "SplitExpenseEntity")
-        request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+        let docRef = documentReference(for: id)
+        try await docRef.delete()
         
-        let result = try context.fetch(request)
-        guard let splitExpenseEntity = result.first else {
-            throw NSError(domain: "CoreDataService", code: 404, userInfo: [NSLocalizedDescriptionKey: "Split Expense not found"])
+        // Delete all participants
+        let participantsSnapshot = try await db.collection("splitExpenseParticipants")
+            .whereField("expenseID", isEqualTo: id.uuidString)
+            .getDocuments()
+        
+        for document in participantsSnapshot.documents {
+            try await document.reference.delete()
+        }
+    }
+    
+    /// Get split expenses where user is a participant
+    func getSplitExpensesAsParticipant(userID: UUID) async throws -> [SplitExpense] {
+        let participantsSnapshot = try await db.collection("splitExpenseParticipants")
+            .whereField("userID", isEqualTo: userID.uuidString)
+            .getDocuments()
+        
+        var splitExpenses: [SplitExpense] = []
+        for document in participantsSnapshot.documents {
+            if let expenseID = UUID(uuidString: document.data()["expenseID"] as? String ?? "") {
+                if let splitExpense = try await getSplitExpense(id: expenseID) {
+                    splitExpenses.append(splitExpense)
+                }
+            }
+        }
+        return splitExpenses
+    }
+    
+    /// Get unpaid split expenses for a user
+    func getUnpaidSplitExpenses(userID: UUID) async throws -> [SplitExpense] {
+        let participantsSnapshot = try await db.collection("splitExpenseParticipants")
+            .whereField("userID", isEqualTo: userID.uuidString)
+            .whereField("hasPaid", isEqualTo: false)
+            .getDocuments()
+        
+        var splitExpenses: [SplitExpense] = []
+        for document in participantsSnapshot.documents {
+            if let expenseID = UUID(uuidString: document.data()["expenseID"] as? String ?? "") {
+                if let splitExpense = try await getSplitExpense(id: expenseID) {
+                    splitExpenses.append(splitExpense)
+                }
+            }
+        }
+        return splitExpenses
+    }
+    
+    /// Get total amount owed to a user
+    func getTotalAmountOwed(toUserID: UUID) async throws -> Double {
+        let splitExpenses = try await getSplitExpenses(forUserID: toUserID)
+        var total = 0.0
+        
+        for expense in splitExpenses {
+            let participants = try await SplitExpenseParticipantService.shared.getUnpaidParticipants(forExpenseID: expense.id)
+            total += participants.reduce(into: 0) { $0 + $1.amountDue }
         }
         
-        context.delete(splitExpenseEntity)
-        try context.save()
+        return total
+    }
+    
+    /// Get total amount user owes others
+    func getTotalAmountUserOwes(userID: UUID) async throws -> Double {
+        let participantsSnapshot = try await db.collection("splitExpenseParticipants")
+            .whereField("userID", isEqualTo: userID.uuidString)
+            .whereField("hasPaid", isEqualTo: false)
+            .getDocuments()
+        
+        return try participantsSnapshot.documents.reduce(into: 0) { total, document in
+            total + (try document.data(as: SplitExpenseParticipant.self).amountDue)
+        }
     }
 }

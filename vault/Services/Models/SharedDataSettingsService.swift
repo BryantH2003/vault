@@ -6,50 +6,58 @@
 //
 
 import Foundation
-import CoreData
+import FirebaseFirestore
 
-/// Service for managing Shared Data Settings entities
-class SharedDataSettingsService: BaseCoreDataService<SharedDataSettingsEntity, SharedDataSettings> {
-    static let shared = SharedDataSettingsService(container: CoreDataService.shared.container, entityName: "SharedDataSettingsEntity")
+/// Service for managing SharedDataSettings entities
+class SharedDataSettingsService {
+    static let shared = SharedDataSettingsService()
+    private let db = Firestore.firestore()
     
-    override func mapModelToEntity(_ model: SharedDataSettings, _ entity: SharedDataSettingsEntity) async throws {
-        entity.id = model.id
-        entity.userID = model.userID
-        entity.friendID = model.friendID
-        entity.canViewExpenses = model.canViewExpenses
-        entity.canViewSavings = model.canViewSavings
-        entity.canViewBudgets = model.canViewBudgets
+    private func documentReference(for id: UUID) -> DocumentReference {
+        return db.collection("sharedDataSettings").document(id.uuidString)
     }
     
-    override func mapEntityToModel(_ entity: SharedDataSettingsEntity) async throws -> SharedDataSettings {
-        guard let id = entity.id,
-              let userID = entity.userID,
-              let friendID = entity.friendID else {
-            throw NSError(domain: "SharedDataSettingsService", code: 400, userInfo: [NSLocalizedDescriptionKey: "Invalid entity data"])
-        }
-        
-        return SharedDataSettings(
-            id: id,
-            userID: userID,
-            friendID: friendID,
-            canViewExpenses: entity.canViewExpenses,
-            canViewSavings: entity.canViewSavings,
-            canViewBudgets: entity.canViewBudgets
-        )
+    func createSharedDataSettings(_ settings: SharedDataSettings) async throws -> SharedDataSettings {
+        let docRef = documentReference(for: settings.id)
+        try docRef.setData(from: settings)
+        return settings
     }
     
-    /// Get shared data settings for a user
-    func getForUser(_ userID: UUID) async throws -> [SharedDataSettings] {
-        let predicate = NSPredicate(format: "userID == %@", userID as CVarArg)
-        return try await getAllWithPredicate(predicate)
+    func getSharedDataSettings(id: UUID) async throws -> SharedDataSettings? {
+        let docRef = documentReference(for: id)
+        let document = try await docRef.getDocument()
+        return try? document.data(as: SharedDataSettings.self)
+    }
+    
+    func getSharedDataSettings(forUserID: UUID) async throws -> [SharedDataSettings] {
+        let snapshot = try await db.collection("sharedDataSettings")
+            .whereField("userID", isEqualTo: forUserID.uuidString)
+            .getDocuments()
+        return try snapshot.documents.compactMap { try $0.data(as: SharedDataSettings.self) }
+    }
+    
+    func getAllSharedDataSettings() async throws -> [SharedDataSettings] {
+        let snapshot = try await db.collection("sharedDataSettings").getDocuments()
+        return try snapshot.documents.compactMap { try $0.data(as: SharedDataSettings.self) }
+    }
+    
+    func updateSharedDataSettings(_ settings: SharedDataSettings) async throws -> SharedDataSettings {
+        let docRef = documentReference(for: settings.id)
+        try docRef.setData(from: settings, merge: true)
+        return settings
+    }
+    
+    func deleteSharedDataSettings(id: UUID) async throws {
+        let docRef = documentReference(for: id)
+        try await docRef.delete()
     }
     
     /// Get shared data settings between two users
-    func getSettingsBetweenUsers(_ userID: UUID, _ friendID: UUID) async throws -> SharedDataSettings? {
-        let predicate = NSPredicate(format: "userID == %@ AND friendID == %@", 
-                                  userID as CVarArg,
-                                  friendID as CVarArg)
-        let settings = try await getAllWithPredicate(predicate)
-        return settings.first
+    func getSharedDataSettings(userID1: UUID, userID2: UUID) async throws -> SharedDataSettings? {
+        let snapshot = try await db.collection("sharedDataSettings")
+            .whereField("userID", isEqualTo: userID1.uuidString)
+            .whereField("sharedWithUserID", isEqualTo: userID2.uuidString)
+            .getDocuments()
+        return try snapshot.documents.first.flatMap { try $0.data(as: SharedDataSettings.self) }
     }
 }
