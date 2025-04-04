@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="21754" systemVersion="22E261" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="UserEntity" representedClassName="UserEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="email" optional="NO" attributeType="String"/>
+        <attribute name="employmentStatus" optional="NO" attributeType="String"/>
+        <attribute name="friends" optional="NO" attributeType="Transformable" valueTransformerName="NSSecureUnarchiveFromData" customClassName="[String]"/>
+        <attribute name="fullName" optional="YES" attributeType="String"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="monthlyIncome" optional="NO" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="monthlySavingsGoal" optional="NO" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="monthlySpendingLimit" optional="NO" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="netPaycheckIncome" optional="NO" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="passwordHash" optional="NO" attributeType="String"/>
+        <attribute name="profileImageUrl" optional="YES" attributeType="String"/>
+        <attribute name="registrationDate" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="updatedAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="username" optional="NO" attributeType="String"/>
+    </entity>
+    <entity name="ExpenseEntity" representedClassName="ExpenseEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="amount" optional="NO" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="categoryID" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="title" optional="NO" attributeType="String"/>
+        <attribute name="transactionDate" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="userID" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="vendor" optional="NO" attributeType="String"/>
+    </entity>
+    <entity name="FixedExpenseEntity" representedClassName="FixedExpenseEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="amount" optional="NO" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="categoryID" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="dueDate" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="title" optional="NO" attributeType="String"/>
+        <attribute name="transactionDate" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="userID" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+    </entity>
+    <entity name="IncomeEntity" representedClassName="IncomeEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="amount" optional="NO" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="incomeDescription" optional="NO" attributeType="String"/>
+        <attribute name="source" optional="NO" attributeType="String"/>
+        <attribute name="transactionDate" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="userID" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+    </entity>
+    <entity name="CategoryEntity" representedClassName="CategoryEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="categoryName" optional="NO" attributeType="String"/>
+        <attribute name="fixedExpense" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+    </entity>
+    <entity name="BudgetEntity" representedClassName="BudgetEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="budgetAmount" optional="NO" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="categoryID" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="endDate" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="startDate" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="title" optional="NO" attributeType="String"/>
+        <attribute name="userID" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+    </entity>
+    <entity name="SavingsGoalEntity" representedClassName="SavingsGoalEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="creationDate" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="currentAmount" optional="NO" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="goalName" optional="NO" attributeType="String"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="targetAmount" optional="NO" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="targetDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="userID" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+    </entity>
+    <entity name="FriendshipEntity" representedClassName="FriendshipEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="actionUserID" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="status" optional="NO" attributeType="String"/>
+        <attribute name="user1ID" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="user2ID" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+    </entity>
+    <entity name="SharedDataSettingsEntity" representedClassName="SharedDataSettingsEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="canViewBudgets" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="canViewExpenses" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="canViewSavings" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="friendID" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="userID" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+    </entity>
+    <entity name="SplitExpenseEntity" representedClassName="SplitExpenseEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="creationDate" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="expenseDescription" optional="YES" attributeType="String"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="payerID" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="totalAmount" optional="NO" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+    </entity>
+    <entity name="SplitExpenseParticipantEntity" representedClassName="SplitExpenseParticipantEntity" syncable="YES" codeGenerationType="class">
+        <attribute name="amountDue" optional="NO" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="splitID" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="status" optional="NO" attributeType="String"/>
+        <attribute name="userID" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+    </entity>
+</model> 

@@ -1,212 +1,275 @@
 import SwiftUI
-import FirebaseFirestore
 
 struct DebugView: View {
-    @EnvironmentObject var authViewModel: AuthViewModel
-    @StateObject private var databaseService = DatabaseService()
-    @State private var expenses: [Expense] = []
-    @State private var savings: [Savings] = []
+    @State private var showingAlert = false
+    @State private var alertMessage = ""
     @State private var isLoading = false
-    @State private var error: Error?
-    @State private var isPopulatingData = false
-    @State private var isResettingDatabase = false
-    @State private var showError = false
-    @State private var errorMessage = ""
+    
+    private let databaseService = CoreDataService.shared
+    private let debugDatabaseService = DebugService.shared
     
     var body: some View {
         NavigationView {
             List {
-                Section("Authentication State") {
-                    Text("Is Authenticated: \(authViewModel.isAuthenticated ? "Yes" : "No")")
-                    if let user = authViewModel.user {
-                        Text("User ID: \(user.id ?? "No ID")")
-                        Text("Email: \(user.email)")
-                        Text("Name: \(user.fullName)")
-                    } else {
-                        Text("No user logged in")
-                    }
-                }
-                
-                Section("Database Actions") {
-                    Button(action: {
-                        resetAndPopulateDatabase()
-                    }) {
-                        HStack {
-                            if isResettingDatabase {
-                                ProgressView()
-                                    .scaleEffect(0.8)
-                            } else {
-                                Text("Reset & Populate Database")
-                                    .foregroundColor(.red)
-                            }
-                            Spacer()
-                            Image(systemName: "arrow.clockwise.circle.fill")
-                                .foregroundColor(.red)
-                        }
-                    }
-                    .disabled(!authViewModel.isAuthenticated || isResettingDatabase)
-                }
-                
-                Section("Populate Data") {
-                    Button(action: {
-                        Task {
-                            await populateDummyData()
-                        }
-                    }) {
-                        HStack {
-                            if isPopulatingData {
-                                ProgressView()
-                            } else {
-                                Text("Populate Dummy Data")
-                                    .foregroundColor(.blue)
-                            }
-                            Spacer()
-                            Image(systemName: "plus.circle.fill")
-                                .foregroundColor(.blue)
-                        }
-                    }
-                    .disabled(isPopulatingData || !authViewModel.isAuthenticated)
-                    .opacity(authViewModel.isAuthenticated ? 1 : 0.5)
-                }
-                
-                Section("User Settings") {
-                    if let user = authViewModel.user {
-                        Text("Monthly Income: $\(user.monthlyIncome, specifier: "%.2f")")
-                        Text("Monthly Savings Goal: $\(user.monthlySavingsGoal, specifier: "%.2f")")
-                        Text("Monthly Spending Limit: $\(user.monthlySpendingLimit, specifier: "%.2f")")
-                    } else {
-                        Text("No user settings available")
-                    }
-                }
-                
-                Section("Recent Expenses") {
-                    if isLoading {
-                        ProgressView()
-                    } else if let error = error {
-                        Text(error.localizedDescription)
+                Section(header: Text("Database Operations")) {
+                    Button(action: clearDatabase) {
+                        Label("Clear Database", systemImage: "trash")
                             .foregroundColor(.red)
-                    } else if expenses.isEmpty {
-                        Text("No expenses found")
-                    } else {
-                        ForEach(expenses) { expense in
-                            VStack(alignment: .leading) {
-                                Text(expense.description)
-                                    .font(.headline)
-                                Text("$\(expense.amount, specifier: "%.2f")")
-                                    .font(.subheadline)
-                                Text(expense.date.formatted())
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
+                    }
+                    
+                    Button(action: populateDatabase) {
+                        Label("Populate with Dummy Data", systemImage: "plus.circle")
                     }
                 }
                 
-                Section("Recent Savings") {
-                    if isLoading {
-                        ProgressView()
-                    } else if let error = error {
-                        Text(error.localizedDescription)
-                            .foregroundColor(.red)
-                    } else if savings.isEmpty {
-                        Text("No savings found")
-                    } else {
-                        ForEach(savings) { saving in
-                            VStack(alignment: .leading) {
-                                Text("Monthly Savings")
-                                    .font(.headline)
-                                Text("$\(saving.amount, specifier: "%.2f")")
-                                    .font(.subheadline)
-                                Text("Month: \(saving.month)/\(saving.year)")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
+                Section(header: Text("Database Statistics")) {
+                    NavigationLink(destination: DatabaseStatsView()) {
+                        Label("View Database Statistics", systemImage: "chart.bar")
                     }
                 }
             }
-            .navigationTitle("Debug Data")
-            .task {
-                await loadData()
-            }
-            .alert("Error", isPresented: $showError) {
-                Button("OK") { }
+            .navigationTitle("Debug Tools")
+            .alert("Debug Operation", isPresented: $showingAlert) {
+                Button("OK", role: .cancel) { }
             } message: {
-                Text(errorMessage)
+                Text(alertMessage)
+            }
+            .overlay {
+                if isLoading {
+                    ProgressView()
+                        .scaleEffect(1.5)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Color.black.opacity(0.2))
+                }
             }
         }
     }
     
-    private func loadData() async {
-        guard let userId = authViewModel.user?.id else { return }
-        
+    private func clearDatabase() {
         isLoading = true
-        error = nil
-        
-        do {
-            let calendar = Calendar.current
-            let currentDate = Date()
-            let components = calendar.dateComponents([.year, .month], from: currentDate)
-            let year = components.year ?? calendar.component(.year, from: currentDate)
-            let month = components.month ?? calendar.component(.month, from: currentDate)
-            
-            // Get current month's expenses
-            async let expensesTask = databaseService.getExpenses(
-                for: userId,
-                in: currentDate.startOfMonth...currentDate.endOfMonth
-            )
-            
-            // Get current month's savings
-            async let savingsTask = databaseService.getSavings(
-                for: userId,
-                month: month,
-                year: year
-            )
-            
-            let (expensesResult, savingsResult) = try await (expensesTask, savingsTask)
-            
-            self.expenses = expensesResult
-            if let savings = savingsResult {
-                self.savings = [savings]
-            } else {
-                self.savings = []
-            }
-        } catch {
-            self.error = error
-            print("Error loading data: \(error.localizedDescription)")
-        }
-        
-        isLoading = false
-    }
-    
-    private func populateDummyData() async {
-        guard let userId = authViewModel.user?.id else { return }
-        
-        isPopulatingData = true
-        error = nil
-        
-        do {
-            try await databaseService.populateDummyData(for: userId)
-            await loadData() // Reload the data after populating
-        } catch {
-            self.error = error
-        }
-        
-        isPopulatingData = false
-    }
-    
-    private func resetAndPopulateDatabase() {
-        isResettingDatabase = true
         
         Task {
             do {
-                try await authViewModel.resetAndPopulateDatabase()
+                // Clear all entities
+                try await debugDatabaseService.clearDatabase()
+                alertMessage = "Database cleared successfully"
+                showingAlert = true
             } catch {
-                errorMessage = error.localizedDescription
-                showError = true
+                alertMessage = "Error clearing database: \(error.localizedDescription)"
+                showingAlert = true
             }
             
-            isResettingDatabase = false
+            isLoading = false
         }
     }
+    
+    private func populateDatabase() {
+        isLoading = true
+        
+        Task {
+            do {
+                // Create dummy data
+                let user = try await createDummyUser()
+                let categories = try await createDummyCategories()
+                let expenses = try await createDummyExpenses(for: user.id, categories: categories)
+                let incomes = try await createDummyIncomes(for: user.id)
+                let budgets = try await createDummyBudgets(for: user.id, categories: categories)
+                let savingsGoals = try await createDummySavingsGoals(for: user.id)
+                
+                alertMessage = """
+                    Database populated with:
+                    - 1 user
+                    - \(categories.count) categories
+                    - \(expenses.count) expenses
+                    - \(incomes.count) incomes
+                    - \(budgets.count) budgets
+                    - \(savingsGoals.count) savings goals
+                    """
+                showingAlert = true
+            } catch {
+                alertMessage = "Error populating database: \(error.localizedDescription)"
+                showingAlert = true
+            }
+            
+            isLoading = false
+        }
+    }
+    
+    private func createDummyUser() async throws -> User {
+        let user = User(
+            username: "testuser",
+            email: "test@example.com",
+            passwordHash: "dummyhash",
+            fullName: "Test User",
+            employmentStatus: "Employed",
+            netPaycheckIncome: 5000.0,
+            profileImageUrl: "",
+            monthlyIncome: 5000.0,
+            monthlySavingsGoal: 2000,
+            monthlySpendingLimit: 3000,
+            friends: [],
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+        return try await databaseService.createUser(user)
+    }
+    
+    private func createDummyCategories() async throws -> [Category] {
+        let categoryNames = ["Food", "Transportation", "Entertainment", "Bills", "Shopping"]
+        var categories: [Category] = []
+        
+        for name in categoryNames {
+            let category = Category(
+                categoryName: name,
+                fixedExpense: name == "Bills"
+            )
+            let createdCategory = try await databaseService.createCategory(category)
+            categories.append(createdCategory)
+        }
+        
+        return categories
+    }
+    
+    private func createDummyExpenses(for userID: UUID, categories: [Category]) async throws -> [Expense] {
+        var expenses: [Expense] = []
+        let vendors = ["Walmart", "Amazon", "Netflix", "Uber", "Restaurant"]
+        
+        for _ in 0..<10 {
+            let randomCategory = categories.randomElement()!
+            let expense = Expense(
+                userID: userID,
+                categoryID: randomCategory.id,
+                title: "Random Expense",
+                amount: Double.random(in: 10...200),
+                vendor: vendors.randomElement()!
+            )
+            let createdExpense = try await databaseService.createExpense(expense)
+            expenses.append(createdExpense)
+        }
+        
+        return expenses
+    }
+    
+    private func createDummyIncomes(for userID: UUID) async throws -> [Income] {
+        var incomes: [Income] = []
+        let sources = ["Salary", "Freelance", "Investment", "Gift"]
+        
+        for _ in 0..<3 {
+            let income = Income(
+                userID: userID,
+                source: sources.randomElement()!,
+                description: "Monthly \(sources.randomElement()!) Income",
+                amount: Double.random(in: 1000...5000)
+            )
+            let createdIncome = try await databaseService.createIncome(income)
+            incomes.append(createdIncome)
+        }
+        
+        return incomes
+    }
+    
+    private func createDummyBudgets(for userID: UUID, categories: [Category]) async throws -> [Budget] {
+        var budgets: [Budget] = []
+        let calendar = Calendar.current
+        let startDate = Date()
+        let endDate = calendar.date(byAdding: .month, value: 1, to: startDate)!
+        
+        for category in categories {
+            let budget = Budget(
+                userID: userID,
+                categoryID: category.id,
+                title: "\(category.categoryName) Budget",
+                budgetAmount: Double.random(in: 200...1000),
+                startDate: startDate,
+                endDate: endDate
+            )
+            let createdBudget = try await databaseService.createBudget(budget)
+            budgets.append(createdBudget)
+        }
+        
+        return budgets
+    }
+    
+    private func createDummySavingsGoals(for userID: UUID) async throws -> [SavingsGoal] {
+        var savingsGoals: [SavingsGoal] = []
+        let goals = [
+            ("Emergency Fund", 10000.0),
+            ("Vacation", 5000.0),
+            ("New Car", 20000.0)
+        ]
+        
+        for (name, target) in goals {
+            let savingsGoal = SavingsGoal(
+                userID: userID,
+                goalName: name,
+                targetAmount: target,
+                currentAmount: Double.random(in: 0...target),
+                targetDate: Calendar.current.date(byAdding: .month, value: 6, to: Date())
+            )
+            let createdGoal = try await databaseService.createSavingsGoal(savingsGoal)
+            savingsGoals.append(createdGoal)
+        }
+        
+        return savingsGoals
+    }
+}
+
+struct DatabaseStatsView: View {
+    @State private var stats: [String: Int] = [:]
+    @State private var isLoading = true
+    
+    private let databaseService = CoreDataService.shared
+    
+    var body: some View {
+        List {
+            ForEach(Array(stats.keys.sorted()), id: \.self) { key in
+                HStack {
+                    Text(key)
+                    Spacer()
+                    Text("\(stats[key] ?? 0)")
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .navigationTitle("Database Statistics")
+        .overlay {
+            if isLoading {
+                ProgressView()
+            }
+        }
+        .onAppear {
+            loadStats()
+        }
+    }
+    
+    private func loadStats() {
+        Task {
+            do {
+                let users = try await databaseService.getAllUsers()
+                let expenses = try await databaseService.getAllExpenses()
+                let incomes = try await databaseService.getAllIncomes()
+                let categories = try await databaseService.getCategories()
+                let budgets = try await databaseService.getAllBudgets()
+                let savingsGoals = try await databaseService.getAllSavingsGoals()
+                
+                stats = [
+                    "Users": users.count,
+                    "Expenses": expenses.count,
+                    "Incomes": incomes.count,
+                    "Categories": categories.count,
+                    "Budgets": budgets.count,
+                    "Savings Goals": savingsGoals.count
+                ]
+                
+                isLoading = false
+            } catch {
+                print("Error loading stats: \(error)")
+                isLoading = false
+            }
+        }
+    }
+}
+
+#Preview {
+    DebugView()
 } 
