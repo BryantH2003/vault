@@ -19,7 +19,8 @@ class DebugService {
             "friendships",
             "sharedDataSettings",
             "splitExpenses",
-            "splitExpenseParticipants"
+            "splitExpenseParticipants",
+            "vendors"
         ]
         
         // Delete all documents in each collection
@@ -72,6 +73,9 @@ class DebugService {
         
         // Create split expenses and participants
         try await createDummySplitExpenses(userId: userId)
+        
+        // Create vendors
+        try await createDummyVendors()
     }
     
     private func createDummyCategories() async throws -> [Category] {
@@ -205,6 +209,23 @@ class DebugService {
             for participant in participants {
                 try await databaseService.createSplitExpenseParticipant(participant)
             }
+        }
+    }
+    
+    // MARK: - Create Dummy Vendors
+    private func createDummyVendors() async throws {
+        print("Creating dummy vendors...")
+        
+        let vendors = [
+            Vendor(id: UUID(), vendorName: "Walmart", vendorLogoImageData: nil),
+            Vendor(id: UUID(), vendorName: "Target", vendorLogoImageData: nil),
+            Vendor(id: UUID(), vendorName: "Whole Foods", vendorLogoImageData: nil),
+            Vendor(id: UUID(), vendorName: "AMC", vendorLogoImageData: nil),
+        ]
+        
+        print("Creating \(vendors.count) dummy vendors...")
+        for vendor in vendors {
+            try await databaseService.createVendor(vendor)
         }
     }
 } 

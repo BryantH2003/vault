@@ -71,6 +71,7 @@ struct AddExpenseView: View {
             .task {
                 await viewModel.loadCategories()
             }
+            .interactiveDismissDisabled(viewModel.isSaving)
         }
     }
     

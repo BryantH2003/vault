@@ -374,4 +374,41 @@ class FirebaseService: DatabaseService {
         let docRef = documentReference(for: "splitExpenseParticipants", id: id)
         try await docRef.delete()
     }
+    
+    // MARK: - Vendor Operations
+    func createVendor(_ vendor: Vendor) async throws -> Vendor {
+        return try await VendorService.shared.createVendor(vendor)
+    }
+    
+    func getVendor(id: UUID) async throws -> Vendor? {
+        return try await VendorService.shared.getVendor(id: id)
+    }
+    
+    func getVendors(forUserID: UUID) async throws -> [Vendor] {
+        return try await VendorService.shared.getVendors(forUserID: forUserID)
+    }
+    
+    func getAllVendors() async throws -> [Vendor] {
+        return try await VendorService.shared.getAllVendors()
+    }
+    
+    func updateVendor(_ vendor: Vendor) async throws -> Vendor {
+        return try await VendorService.shared.updateVendor(vendor)
+    }
+    
+    func deleteVendor(id: UUID) async throws {
+        try await VendorService.shared.deleteVendor(id: id)
+    }
+    
+    func getVendors(forCategoryID: UUID) async throws -> [Vendor] {
+        return try await VendorService.shared.getVendors(forCategoryID: forCategoryID)
+    }
+    
+    func searchVendors(query: String) async throws -> [Vendor] {
+        return try await VendorService.shared.searchVendors(query: query)
+    }
+    
+    func getFrequentVendors(forUserID: UUID, limit: Int = 5) async throws -> [Vendor] {
+        return try await VendorService.shared.getFrequentVendors(forUserID: forUserID, limit: limit)
+    }
 } 

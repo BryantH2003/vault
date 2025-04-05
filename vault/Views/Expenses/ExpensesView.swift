@@ -45,7 +45,12 @@ struct ExpensesView: View {
                 }
             }
         }
-        .sheet(isPresented: $viewModel.showingAddExpense) {
+        .sheet(isPresented: $viewModel.showingAddExpense, onDismiss: {
+            // Refresh data when sheet is dismissed
+            Task {
+                await viewModel.loadExpensesData(forUserID: userID)
+            }
+        }) {
             AddExpenseView(userID: userID)
         }
         .task {
