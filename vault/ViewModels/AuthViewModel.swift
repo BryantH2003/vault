@@ -55,7 +55,7 @@ class AuthViewModel: ObservableObject {
             try await debugDataService.clearDatabase()
             
             // Populate with new data
-            try await debugDataService.populateDummyData(for: userId)
+            try await debugDataService.createDummyData(for: userId)
             
             // Refresh the user data
             if let firebaseUser = auth.currentUser {

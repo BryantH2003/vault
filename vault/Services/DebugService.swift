@@ -49,33 +49,54 @@ class DebugService {
         }
     }
     
-    func populateDummyData(for userId: UUID) async throws {
-        // Create categories first as they're referenced by other entities
+    func createDummyData(for userID: UUID) async throws {
+        print("Creating dummy data...")
+        
+        // Create categories first
         let categories = try await createDummyCategories()
+        print("Created \(categories.count) categories")
         
-        // Create user's expenses
-        try await createDummyExpenses(userId: userId, categories: categories)
+        // Create expenses for the current user
+        try await createDummyExpenses(forUserID: userID, categories: categories)
+        print("Created expenses")
         
-        // Create fixed expenses
-        try await createDummyFixedExpenses(userId: userId, categories: categories)
+        try await createDummyFixedExpenses(forUserID: userID, categories: categories)
+        print("Created Fixed Expenses")
         
-        // Create income entries
-        try await createDummyIncome(userId: userId)
+        try await createDummyIncome(forUserID: userID)
+        print("Created incomes")
         
-        // Create budget
-        try await createDummyBudget(userId: userId, categories: categories)
+        try await createDummyBudget(forUserID: userID, categories: categories)
+        print("Created incomes")
         
-        // Create savings goals
-        try await createDummySavingsGoals(userId: userId)
+        try await createDummySavingsGoals(forUserID: userID)
+        print("Created saving goals")
         
-        // Create friendships and shared data settings
-        try await createDummyFriendships(userId: userId)
+        // Create additional users (excluding the current user)
+        let additionalUsers = try await createDummyUsers()
+        print("Created \(additionalUsers.count) additional users")
         
-        // Create split expenses and participants
-        try await createDummySplitExpenses(userId: userId)
+        // Create friendships between current user and dummy users
+        try await createDummyFriendships(forUserID: userID, withUsers: additionalUsers)
+        print("Created friendships")
+        
+        try await createDummySplitExpenses(between: additionalUsers)
+        print("Created split expenses")
         
         // Create vendors
-        try await createDummyVendors()
+        try await createDummyVendors(categoryIDs: categories.map { $0.id })
+        print("Created vendors")
+        
+        // Create split expenses between current user and first dummy user
+        if let firstDummyUser = additionalUsers.first {
+            try await createDummySplitExpenses(between: [
+                try await databaseService.getUser(id: userID),
+                firstDummyUser
+            ].compactMap { $0 })
+        }
+        print("Created split expenses")
+        
+        print("Finished creating dummy data")
     }
     
     private func createDummyCategories() async throws -> [Category] {
@@ -101,7 +122,7 @@ class DebugService {
         }
     }
     
-    private func createDummyExpenses(userId: UUID, categories: [Category]) async throws {
+    private func createDummyExpenses(forUserID userId: UUID, categories: [Category]) async throws {
         let expenses = [
             Expense(id: UUID(), userID: userId, categoryID: categories[0].id, title: "Weekly Groceries", amount: 150.00, transactionDate: Date(), vendor: "Whole Foods"),
             Expense(id: UUID(), userID: userId, categoryID: categories[3].id, title: "Movie Night", amount: 30.00, transactionDate: Date().addingTimeInterval(-86400), vendor: "AMC"),
@@ -113,7 +134,7 @@ class DebugService {
         }
     }
     
-    private func createDummyFixedExpenses(userId: UUID, categories: [Category]) async throws {
+    private func createDummyFixedExpenses(forUserID userId: UUID, categories: [Category]) async throws {
         let fixedExpenses = [
             FixedExpense(id: UUID(), userID: userId, categoryID: categories[1].id, title: "Monthly Rent", amount: 2000.00, dueDate: Date().addingTimeInterval(86400 * 7), transactionDate: Date()),
             FixedExpense(id: UUID(), userID: userId, categoryID: categories[2].id, title: "Electricity Bill", amount: 150.00, dueDate: Date().addingTimeInterval(86400 * 14), transactionDate: Date()),
@@ -125,7 +146,7 @@ class DebugService {
         }
     }
     
-    private func createDummyIncome(userId: UUID) async throws {
+    private func createDummyIncome(forUserID userId: UUID) async throws {
         let incomes = [
             Income(id: UUID(), userID: userId, source: "Salary", description: "Monthly Salary", amount: 5000.00, transactionDate: Date()),
             Income(id: UUID(), userID: userId, source: "Freelance", description: "Web Development Project", amount: 1000.00, transactionDate: Date().addingTimeInterval(-86400 * 7)),
@@ -137,7 +158,7 @@ class DebugService {
         }
     }
     
-    private func createDummyBudget(userId: UUID, categories: [Category]) async throws {
+    private func createDummyBudget(forUserID userId: UUID, categories: [Category]) async throws {
         let startOfMonth = Calendar.current.date(from: Calendar.current.dateComponents([.year, .month], from: Date()))!
         let endOfMonth = Calendar.current.date(byAdding: DateComponents(month: 1, day: -1), to: startOfMonth)!
         
@@ -151,7 +172,7 @@ class DebugService {
         }
     }
     
-    private func createDummySavingsGoals(userId: UUID) async throws {
+    private func createDummySavingsGoals(forUserID userId: UUID) async throws {
         let savingsGoals = [
             SavingsGoal(id: UUID(), userID: userId, goalName: "Emergency Fund", targetAmount: 10000.00, currentAmount: 5000.00, targetDate: Date().addingTimeInterval(86400 * 365), creationDate: Date()),
             SavingsGoal(id: UUID(), userID: userId, goalName: "Vacation Fund", targetAmount: 3000.00, currentAmount: 1500.00, targetDate: Date().addingTimeInterval(86400 * 180), creationDate: Date()),
@@ -163,57 +184,87 @@ class DebugService {
         }
     }
     
-    private func createDummyFriendships(userId: UUID) async throws {
-        let friendIds = [UUID(), UUID(), UUID()]
-        let friendships = [
-            Friendship(id: UUID(), user1ID: userId, user2ID: friendIds[0], status: "accepted", actionUserID: UUID()),
-            Friendship(id: UUID(), user1ID: userId, user2ID: friendIds[1], status: "pending", actionUserID: UUID()),
-            Friendship(id: UUID(), user1ID: userId, user2ID: friendIds[2], status: "accepted", actionUserID: UUID())
-        ]
+    private func createDummyFriendships(forUserID userID: UUID, withUsers users: [User]) async throws {
+        print("Creating dummy friendships...")
         
-        for (index, friendship) in friendships.enumerated() {
-            try await databaseService.createFriendship(friendship)
+        // Make current user friends with first dummy user
+        if let firstUser = users.first {
+            let friendship1 = Friendship(
+                user1ID: userID,
+                user2ID: firstUser.id,
+                status: "Accepted",
+                actionUserID: userID
+            )
+            try await databaseService.createFriendship(friendship1)
+            print("Created friendship between current user and \(firstUser.username)")
             
-            // Create shared data settings for accepted friendships
-            if friendship.status == "accepted" {
-                let settings = SharedDataSettings(
-                    id: UUID(),
-                    userID: userId,
-                    friendID: friendIds[index],
-                    canViewExpenses: true,
-                    canViewSavings: index == 0,
-                    canViewBudgets: index == 0
+            // If there's a second user, create a pending friend request
+            if users.count >= 2 {
+                let friendship2 = Friendship(
+                    user1ID: userID,
+                    user2ID: users[1].id,
+                    status: "Pending",
+                    actionUserID: userID
                 )
-                try await databaseService.createSharedDataSettings(settings)
+                try await databaseService.createFriendship(friendship2)
+                print("Created pending friendship between current user and \(users[1].username)")
             }
         }
     }
     
-    private func createDummySplitExpenses(userId: UUID) async throws {
+    private func createDummySplitExpenses(between users: [User]) async throws {
+        guard users.count >= 2 else {
+            print("Need at least 2 users to create split expenses")
+            return
+        }
+        
         let splitExpenses = [
-            SplitExpense(id: UUID(), expenseDescription: "Dinner", totalAmount: 150.00, payerID: userId, creationDate: Date()),
-            SplitExpense(id: UUID(), expenseDescription: "Movie Night", totalAmount: 90.00, payerID: userId, creationDate: Date().addingTimeInterval(-86400)),
-            SplitExpense(id: UUID(), expenseDescription: "Groceries", totalAmount: 200.00, payerID: userId, creationDate: Date().addingTimeInterval(-172800))
+            SplitExpense(
+                expenseDescription: "Dinner",
+                totalAmount: 150.00,
+                payerID: users[1].id,
+                creatorID: users[0].id,
+                creationDate: Date()
+            ),
+            SplitExpense(
+                expenseDescription: "Movie Night",
+                totalAmount: 90.00,
+                payerID: users[1].id,
+                creatorID: users[0].id,
+                creationDate: Date().addingTimeInterval(-86400)
+            ),
+            SplitExpense(
+                expenseDescription: "Groceries",
+                totalAmount: 200.00,
+                payerID: users[1].id,
+                creatorID: users[0].id,
+                creationDate: Date().addingTimeInterval(-172800)
+            )
         ]
         
+        print("Creating \(splitExpenses.count) split expenses...")
         for splitExpense in splitExpenses {
             let createdSplitExpense = try await databaseService.createSplitExpense(splitExpense)
             
-            // Create 2-3 participants for each split expense
-            let participants = [
-                SplitExpenseParticipant(id: UUID(), splitID: createdSplitExpense.id, userID: UUID(), amountDue: splitExpense.totalAmount / 3.0, status: "pending"),
-                SplitExpenseParticipant(id: UUID(), splitID: createdSplitExpense.id, userID: UUID(), amountDue: splitExpense.totalAmount / 3.0, status: "pending"),
-                SplitExpenseParticipant(id: UUID(), splitID: createdSplitExpense.id, userID: UUID(), amountDue: splitExpense.totalAmount / 3.0, status: "completed")
-            ]
+            // Create participants for each split expense
+            let amountPerPerson = splitExpense.totalAmount / 2.0 // Split between 2 people
             
-            for participant in participants {
-                try await databaseService.createSplitExpenseParticipant(participant)
-            }
+            // Create participant for the second user
+            let participant = SplitExpenseParticipant(
+                splitID: createdSplitExpense.id,
+                userID: users[1].id,
+                amountDue: amountPerPerson,
+                status: "pending"
+            )
+            
+            try await databaseService.createSplitExpenseParticipant(participant)
+            print("Created split expense: \(splitExpense.expenseDescription) with participant")
         }
+        print("Finished creating split expenses")
     }
     
     // MARK: - Create Dummy Vendors
-    private func createDummyVendors() async throws {
+    private func createDummyVendors(categoryIDs: [UUID]) async throws {
         print("Creating dummy vendors...")
         
         let vendors = [
@@ -228,4 +279,83 @@ class DebugService {
             try await databaseService.createVendor(vendor)
         }
     }
+    
+    // MARK: - Create Dummy Users
+    private func createDummyUsers() async throws -> [User] {
+        print("Creating dummy users...")
+        
+        let users = [
+            User(
+                username: "john.doe",
+                email: "john.doe@example.com",
+                passwordHash: "dummy_hash",
+                fullName: "John Doe",
+                employmentStatus: "Employed",
+                netPaycheckIncome: 5000,
+                profileImageUrl: nil,
+                monthlyIncome: 6000,
+                monthlySavingsGoal: 1500,
+                monthlySpendingLimit: 3000,
+                friends: [],
+                createdAt: Date(),
+                updatedAt: Date()
+            ),
+            User(
+                username: "jane.smith",
+                email: "jane.smith@example.com",
+                passwordHash: "dummy_hash",
+                fullName: "Jane Smith",
+                employmentStatus: "Self-Employed",
+                netPaycheckIncome: 6000,
+                profileImageUrl: nil,
+                monthlyIncome: 7000,
+                monthlySavingsGoal: 2000,
+                monthlySpendingLimit: 3500,
+                friends: [],
+                createdAt: Date(),
+                updatedAt: Date()
+            ),
+            User(
+                username: "mike.wilson",
+                email: "mike.wilson@example.com",
+                passwordHash: "dummy_hash",
+                fullName: "Mike Wilson",
+                employmentStatus: "Employed",
+                netPaycheckIncome: 4500,
+                profileImageUrl: nil,
+                monthlyIncome: 5500,
+                monthlySavingsGoal: 1200,
+                monthlySpendingLimit: 2800,
+                friends: [],
+                createdAt: Date(),
+                updatedAt: Date()
+            ),
+            User(
+                username: "sarah.johnson",
+                email: "sarah.johnson@example.com",
+                passwordHash: "dummy_hash",
+                fullName: "Sarah Johnson",
+                employmentStatus: "Freelancer",
+                netPaycheckIncome: 5500,
+                profileImageUrl: nil,
+                monthlyIncome: 6500,
+                monthlySavingsGoal: 1800,
+                monthlySpendingLimit: 3200,
+                friends: [],
+                createdAt: Date(),
+                updatedAt: Date()
+            )
+        ]
+        
+        print("Creating \(users.count) dummy users...")
+        var createdUsers: [User] = []
+        for user in users {
+            let createdUser = try await databaseService.createUser(user)
+            createdUsers.append(createdUser)
+        }
+        
+        return createdUsers
+    }
+    
 } 
+

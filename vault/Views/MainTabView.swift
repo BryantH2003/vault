@@ -21,10 +21,10 @@ struct MainTabView: View {
                 }
                 
                 NavigationStack {
-                    Text("Friends")
+                    FriendsView(userID: user.id)
                 }
                 .tabItem {
-                    Label("Friends", systemImage: "person.fill")
+                    Label("Friends", systemImage: "person.2.fill")
                 }
                 
                 NavigationStack {
