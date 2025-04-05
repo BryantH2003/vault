@@ -4,6 +4,7 @@ struct DebugView: View {
     @State private var showingAlert = false
     @State private var alertMessage = ""
     @State private var isLoading = false
+    @EnvironmentObject var authViewModel: AuthViewModel
     
     private let databaseService = FirebaseService.shared
     private let debugDatabaseService = DebugService.shared
@@ -50,11 +51,13 @@ struct DebugView: View {
         
         Task {
             do {
-                // Clear all entities
+                print("Clearing database...")
                 try await debugDatabaseService.clearDatabase()
                 alertMessage = "Database cleared successfully"
                 showingAlert = true
+                print("Database cleared successfully")
             } catch {
+                print("Error clearing database: \(error.localizedDescription)")
                 alertMessage = "Error clearing database: \(error.localizedDescription)"
                 showingAlert = true
             }
@@ -68,15 +71,20 @@ struct DebugView: View {
         
         Task {
             do {
-                // Create dummy user first
-                let user = try await createDummyUser()
+                guard let userId = authViewModel.user?.id else {
+                    throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "User not authenticated"])
+                }
                 
-                // Use DebugService to populate the rest of the data
-                try await debugDatabaseService.populateDummyData(for: user.id)
+                print("Starting database population for user: \(userId)")
+                
+                // Use DebugService to populate the data
+                try await debugDatabaseService.populateDummyData(for: userId)
                 
                 alertMessage = "Database populated successfully with dummy data"
                 showingAlert = true
+                print("Database populated successfully")
             } catch {
+                print("Error populating database: \(error.localizedDescription)")
                 alertMessage = "Error populating database: \(error.localizedDescription)"
                 showingAlert = true
             }

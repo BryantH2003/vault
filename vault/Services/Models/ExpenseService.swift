@@ -23,10 +23,13 @@ class ExpenseService {
     }
     
     func getExpenses(forUserID: UUID) async throws -> [Expense] {
+        print("Fetching expenses for user: \(forUserID)")
         let snapshot = try await db.collection("expenses")
             .whereField("userID", isEqualTo: forUserID.uuidString)
             .getDocuments()
-        return try snapshot.documents.compactMap { try $0.data(as: Expense.self) }
+        let expenses = try snapshot.documents.compactMap { try $0.data(as: Expense.self) }
+        print("Found \(expenses.count) expenses")
+        return expenses
     }
     
     func getAllExpenses() async throws -> [Expense] {
@@ -47,20 +50,26 @@ class ExpenseService {
     
     /// Get expenses for a user in a date range
     func getExpenses(forUserID: UUID, in dateRange: ClosedRange<Date>) async throws -> [Expense] {
+        print("Fetching expenses for user: \(forUserID) in date range: \(dateRange)")
         let snapshot = try await db.collection("expenses")
             .whereField("userID", isEqualTo: forUserID.uuidString)
             .whereField("transactionDate", isGreaterThanOrEqualTo: dateRange.lowerBound)
             .whereField("transactionDate", isLessThanOrEqualTo: dateRange.upperBound)
             .getDocuments()
-        return try snapshot.documents.compactMap { try $0.data(as: Expense.self) }
+        let expenses = try snapshot.documents.compactMap { try $0.data(as: Expense.self) }
+        print("Found \(expenses.count) expenses in date range")
+        return expenses
     }
     
     /// Get expenses for a user and category
     func getExpenses(forUserID: UUID, categoryID: UUID) async throws -> [Expense] {
+        print("Fetching expenses for user: \(forUserID) in category: \(categoryID)")
         let snapshot = try await db.collection("expenses")
             .whereField("userID", isEqualTo: forUserID.uuidString)
             .whereField("categoryID", isEqualTo: categoryID.uuidString)
             .getDocuments()
-        return try snapshot.documents.compactMap { try $0.data(as: Expense.self) }
+        let expenses = try snapshot.documents.compactMap { try $0.data(as: Expense.self) }
+        print("Found \(expenses.count) expenses in category")
+        return expenses
     }
 }
