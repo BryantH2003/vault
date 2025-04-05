@@ -9,7 +9,7 @@ struct Expense: Identifiable, Codable {
     var title: String
     var amount: Double
     var transactionDate: Date
-    var vendor: String
+    var vendor: String?
     
     init(id: UUID = UUID(),
          userID: UUID,
@@ -17,7 +17,7 @@ struct Expense: Identifiable, Codable {
          title: String,
          amount: Double,
          transactionDate: Date = Date(),
-         vendor: String) {
+         vendor: String? = nil) {
         self.id = id
         self.userID = userID
         self.categoryID = categoryID
@@ -62,7 +62,7 @@ struct Expense: Identifiable, Codable {
         self.title = try container.decode(String.self, forKey: .title)
         self.amount = try container.decode(Double.self, forKey: .amount)
         self.transactionDate = try container.decode(Date.self, forKey: .transactionDate)
-        self.vendor = try container.decode(String.self, forKey: .vendor)
+        self.vendor = try container.decodeIfPresent(String.self, forKey: .vendor)
     }
     
     func encode(to encoder: Encoder) throws {
@@ -75,6 +75,6 @@ struct Expense: Identifiable, Codable {
         try container.encode(title, forKey: .title)
         try container.encode(amount, forKey: .amount)
         try container.encode(transactionDate, forKey: .transactionDate)
-        try container.encode(vendor, forKey: .vendor)
+        try container.encodeIfPresent(vendor, forKey: .vendor)
     }
 } 

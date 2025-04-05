@@ -11,7 +11,7 @@ struct MainTabView: View {
                         Label("Dashboard", systemImage: "chart.pie.fill")
                     }
                 
-                Text("Expenses")
+                ExpensesView(userID: user.id)
                     .tabItem {
                         Label("Expenses", systemImage: "dollarsign.circle.fill")
                     }
