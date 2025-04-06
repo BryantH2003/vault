@@ -82,29 +82,18 @@ protocol DatabaseService {
     func getSplitExpenseParticipants(forSplitID: UUID) async throws -> [SplitExpenseParticipant]
     func updateSplitExpenseParticipant(_ participant: SplitExpenseParticipant) async throws -> SplitExpenseParticipant
     func deleteSplitExpenseParticipant(id: UUID) async throws
+    
+    // MARK: - Vendor Operations
+    func createVendor(_ vendor: Vendor) async throws -> Vendor
+    func getVendor(id: UUID) async throws -> Vendor?
+    func getVendors(forUserID: UUID) async throws -> [Vendor]
+    func getAllVendors() async throws -> [Vendor]
+    func updateVendor(_ vendor: Vendor) async throws -> Vendor
+    func deleteVendor(id: UUID) async throws
+    func getVendors(forCategoryID: UUID) async throws -> [Vendor]
+    func searchVendors(query: String) async throws -> [Vendor]
+    func getFrequentVendors(forUserID: UUID, limit: Int) async throws -> [Vendor]
 }
-
-    private let db = Firestore.firestore()
-
-    private func deleteCollection(_ collectionPath: String) async throws {
-        let batchSize = 100
-        let collection = db.collection(collectionPath)
-        
-        while true {
-            let query = collection.limit(to: batchSize)
-            let snapshot = try await query.getDocuments()
-            
-            if snapshot.documents.isEmpty {
-                break
-            }
-            
-            let batch = db.batch()
-            snapshot.documents.forEach { document in
-                batch.deleteDocument(document.reference)
-            }
-            try await batch.commit()
-        }
-    }
     
 
 enum DatabaseError: Error {

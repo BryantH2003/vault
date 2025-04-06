@@ -327,10 +327,26 @@ class FirebaseService: DatabaseService {
     }
     
     func getSplitExpenses(forUserID: UUID) async throws -> [SplitExpense] {
-        let snapshot = try await db.collection("splitExpenses")
+        // Get expenses where user is either creator or payer
+        let creatorSnapshot = try await db.collection("splitExpenses")
+            .whereField("creatorID", isEqualTo: forUserID.uuidString)
+            .getDocuments()
+        
+        let payerSnapshot = try await db.collection("splitExpenses")
             .whereField("payerID", isEqualTo: forUserID.uuidString)
             .getDocuments()
-        return try snapshot.documents.compactMap { try $0.data(as: SplitExpense.self) }
+        
+        var splitExpenses = try creatorSnapshot.documents.compactMap { try $0.data(as: SplitExpense.self) }
+        let payerExpenses = try payerSnapshot.documents.compactMap { try $0.data(as: SplitExpense.self) }
+        
+        // Add payer expenses that aren't already included (where user is payer but not creator)
+        for expense in payerExpenses {
+            if !splitExpenses.contains(where: { $0.id == expense.id }) {
+                splitExpenses.append(expense)
+            }
+        }
+        
+        return splitExpenses
     }
     
     func updateSplitExpense(_ splitExpense: SplitExpense) async throws -> SplitExpense {
@@ -373,5 +389,42 @@ class FirebaseService: DatabaseService {
     func deleteSplitExpenseParticipant(id: UUID) async throws {
         let docRef = documentReference(for: "splitExpenseParticipants", id: id)
         try await docRef.delete()
+    }
+    
+    // MARK: - Vendor Operations
+    func createVendor(_ vendor: Vendor) async throws -> Vendor {
+        return try await VendorService.shared.createVendor(vendor)
+    }
+    
+    func getVendor(id: UUID) async throws -> Vendor? {
+        return try await VendorService.shared.getVendor(id: id)
+    }
+    
+    func getVendors(forUserID: UUID) async throws -> [Vendor] {
+        return try await VendorService.shared.getVendors(forUserID: forUserID)
+    }
+    
+    func getAllVendors() async throws -> [Vendor] {
+        return try await VendorService.shared.getAllVendors()
+    }
+    
+    func updateVendor(_ vendor: Vendor) async throws -> Vendor {
+        return try await VendorService.shared.updateVendor(vendor)
+    }
+    
+    func deleteVendor(id: UUID) async throws {
+        try await VendorService.shared.deleteVendor(id: id)
+    }
+    
+    func getVendors(forCategoryID: UUID) async throws -> [Vendor] {
+        return try await VendorService.shared.getVendors(forCategoryID: forCategoryID)
+    }
+    
+    func searchVendors(query: String) async throws -> [Vendor] {
+        return try await VendorService.shared.searchVendors(query: query)
+    }
+    
+    func getFrequentVendors(forUserID: UUID, limit: Int = 5) async throws -> [Vendor] {
+        return try await VendorService.shared.getFrequentVendors(forUserID: forUserID, limit: limit)
     }
 } 

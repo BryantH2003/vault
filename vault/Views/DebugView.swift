@@ -78,7 +78,7 @@ struct DebugView: View {
                 print("Starting database population for user: \(userId)")
                 
                 // Use DebugService to populate the data
-                try await debugDatabaseService.populateDummyData(for: userId)
+                try await debugDatabaseService.createDummyData(for: userId)
                 
                 alertMessage = "Database populated successfully with dummy data"
                 showingAlert = true
@@ -91,124 +91,6 @@ struct DebugView: View {
             
             isLoading = false
         }
-    }
-    
-    private func createDummyUser() async throws -> User {
-        let user = User(
-            username: "testuser",
-            email: "test@example.com",
-            passwordHash: "dummyhash",
-            fullName: "Test User",
-            employmentStatus: "Employed",
-            netPaycheckIncome: 5000.0,
-            profileImageUrl: "",
-            monthlyIncome: 5000.0,
-            monthlySavingsGoal: 2000,
-            monthlySpendingLimit: 3000,
-            friends: [],
-            createdAt: Date(),
-            updatedAt: Date()
-        )
-        return try await databaseService.createUser(user)
-    }
-    
-    private func createDummyCategories() async throws -> [Category] {
-        let categoryNames = ["Food", "Transportation", "Entertainment", "Bills", "Shopping"]
-        var categories: [Category] = []
-        
-        for name in categoryNames {
-            let category = Category(
-                categoryName: name,
-                fixedExpense: name == "Bills"
-            )
-            let createdCategory = try await databaseService.createCategory(category)
-            categories.append(createdCategory)
-        }
-        
-        return categories
-    }
-    
-    private func createDummyExpenses(for userID: UUID, categories: [Category]) async throws -> [Expense] {
-        var expenses: [Expense] = []
-        let vendors = ["Walmart", "Amazon", "Netflix", "Uber", "Restaurant"]
-        
-        for _ in 0..<10 {
-            let randomCategory = categories.randomElement()!
-            let expense = Expense(
-                userID: userID,
-                categoryID: randomCategory.id,
-                title: "Random Expense",
-                amount: Double.random(in: 10...200),
-                vendor: vendors.randomElement()!
-            )
-            let createdExpense = try await databaseService.createExpense(expense)
-            expenses.append(createdExpense)
-        }
-        
-        return expenses
-    }
-    
-    private func createDummyIncomes(for userID: UUID) async throws -> [Income] {
-        var incomes: [Income] = []
-        let sources = ["Salary", "Freelance", "Investment", "Gift"]
-        
-        for _ in 0..<3 {
-            let income = Income(
-                userID: userID,
-                source: sources.randomElement()!,
-                description: "Monthly \(sources.randomElement()!) Income",
-                amount: Double.random(in: 1000...5000)
-            )
-            let createdIncome = try await databaseService.createIncome(income)
-            incomes.append(createdIncome)
-        }
-        
-        return incomes
-    }
-    
-    private func createDummyBudgets(for userID: UUID, categories: [Category]) async throws -> [Budget] {
-        var budgets: [Budget] = []
-        let calendar = Calendar.current
-        let startDate = Date()
-        let endDate = calendar.date(byAdding: .month, value: 1, to: startDate)!
-        
-        for category in categories {
-            let budget = Budget(
-                userID: userID,
-                categoryID: category.id,
-                title: "\(category.categoryName) Budget",
-                budgetAmount: Double.random(in: 200...1000),
-                startDate: startDate,
-                endDate: endDate
-            )
-            let createdBudget = try await databaseService.createBudget(budget)
-            budgets.append(createdBudget)
-        }
-        
-        return budgets
-    }
-    
-    private func createDummySavingsGoals(for userID: UUID) async throws -> [SavingsGoal] {
-        var savingsGoals: [SavingsGoal] = []
-        let goals = [
-            ("Emergency Fund", 10000.0),
-            ("Vacation", 5000.0),
-            ("New Car", 20000.0)
-        ]
-        
-        for (name, target) in goals {
-            let savingsGoal = SavingsGoal(
-                userID: userID,
-                goalName: name,
-                targetAmount: target,
-                currentAmount: Double.random(in: 0...target),
-                targetDate: Calendar.current.date(byAdding: .month, value: 6, to: Date())
-            )
-            let createdGoal = try await databaseService.createSavingsGoal(savingsGoal)
-            savingsGoals.append(createdGoal)
-        }
-        
-        return savingsGoals
     }
 }
 
@@ -270,4 +152,4 @@ struct DatabaseStatsView: View {
 
 #Preview {
     DebugView()
-} 
+}

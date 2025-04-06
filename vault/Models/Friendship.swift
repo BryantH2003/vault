@@ -24,6 +24,9 @@ struct Friendship: Identifiable, Codable {
         case pending = "Pending"
         case accepted = "Accepted"
         case blocked = "Blocked"
+        case declined = "Declined"
+        case removed = "Removed"
+        case unknown = "Unknown"
     }
     
     enum CodingKeys: String, CodingKey {

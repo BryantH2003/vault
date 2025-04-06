@@ -14,58 +14,77 @@ class FriendsService {
     private let db = Firestore.firestore()
     
     private func documentReference(for id: UUID) -> DocumentReference {
-        return db.collection("friends").document(id.uuidString)
+        return db.collection("friendships").document(id.uuidString)
     }
     
-    func addFriend(userID: UUID, friendID: UUID) async throws {
-        let docRef = documentReference(for: UUID())
-        try await docRef.setData([
-            "userID": userID.uuidString,
-            "friendID": friendID.uuidString,
-            "createdAt": Date()
-        ])
-    }
-    
-    func removeFriend(userID: UUID, friendID: UUID) async throws {
-        let snapshot = try await db.collection("friends")
-            .whereField("userID", isEqualTo: userID.uuidString)
-            .whereField("friendID", isEqualTo: friendID.uuidString)
+    func getFriendships(forUserID: UUID) async throws -> [Friendship] {
+        print("Fetching friendships for user: \(forUserID)")
+        let snapshot = try await db.collection("friendships")
+            .whereField("user1ID", isEqualTo: forUserID.uuidString)
             .getDocuments()
+            
+        let snapshot2 = try await db.collection("friendships")
+            .whereField("user2ID", isEqualTo: forUserID.uuidString)
+            .getDocuments()
+            
+        var friendships = try snapshot.documents.compactMap { try $0.data(as: Friendship.self) }
+        friendships.append(contentsOf: try snapshot2.documents.compactMap { try $0.data(as: Friendship.self) })
         
-        for document in snapshot.documents {
-            try await document.reference.delete()
+        print("Found \(friendships.count) friendships")
+        return friendships
+    }
+    
+    func sendFriendRequest(from userID: UUID, to targetUserID: UUID) async throws -> Friendship {
+        let friendship = Friendship(
+            user1ID: userID,
+            user2ID: targetUserID,
+            status: "Pending",
+            actionUserID: userID
+        )
+        
+        let docRef = documentReference(for: friendship.id)
+        try docRef.setData(from: friendship)
+        return friendship
+    }
+    
+    func acceptFriendRequest(_ friendship: Friendship) async throws -> Friendship {
+        var updatedFriendship = friendship
+        updatedFriendship.status = "Accepted"
+        
+        let docRef = documentReference(for: friendship.id)
+        try docRef.setData(from: updatedFriendship)
+        return updatedFriendship
+    }
+    
+    func rejectFriendRequest(_ friendship: Friendship) async throws {
+        let docRef = documentReference(for: friendship.id)
+        try await docRef.delete()
+    }
+    
+    func removeFriend(_ friendship: Friendship) async throws {
+        let docRef = documentReference(for: friendship.id)
+        try await docRef.delete()
+    }
+    
+    func getFriendshipStatus(between userID: UUID, and otherUserID: UUID) async throws -> String? {
+        let snapshot = try await db.collection("friendships")
+            .whereField("user1ID", isEqualTo: userID.uuidString)
+            .whereField("user2ID", isEqualTo: otherUserID.uuidString)
+            .getDocuments()
+            
+        let snapshot2 = try await db.collection("friendships")
+            .whereField("user1ID", isEqualTo: otherUserID.uuidString)
+            .whereField("user2ID", isEqualTo: userID.uuidString)
+            .getDocuments()
+            
+        if let friendship = try snapshot.documents.first.map({ try $0.data(as: Friendship.self) }) {
+            return friendship.status
         }
-    }
-    
-    func getFriends(forUserID: UUID) async throws -> [User] {
-        let snapshot = try await db.collection("friends")
-            .whereField("userID", isEqualTo: forUserID.uuidString)
-            .getDocuments()
         
-        var friends: [User] = []
-        for document in snapshot.documents {
-            if let friendID = UUID(uuidString: document.data()["friendID"] as? String ?? "") {
-                if let friend = try await UserService.shared.getUser(id: friendID) {
-                    friends.append(friend)
-                }
-            }
+        if let friendship = try snapshot2.documents.first.map({ try $0.data(as: Friendship.self) }) {
+            return friendship.status
         }
-        return friends
-    }
-    
-    func isFriend(userID: UUID, friendID: UUID) async throws -> Bool {
-        let snapshot = try await db.collection("friends")
-            .whereField("userID", isEqualTo: userID.uuidString)
-            .whereField("friendID", isEqualTo: friendID.uuidString)
-            .getDocuments()
-        return !snapshot.documents.isEmpty
-    }
-    
-    func getMutualFriends(userID1: UUID, userID2: UUID) async throws -> [User] {
-        let friends1 = try await getFriends(forUserID: userID1)
-        let friends2 = try await getFriends(forUserID: userID2)
         
-        let friends1IDs = Set(friends1.map { $0.id })
-        return friends2.filter { friends1IDs.contains($0.id) }
+        return nil
     }
 }

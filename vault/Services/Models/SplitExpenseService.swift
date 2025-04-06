@@ -30,10 +30,26 @@ class SplitExpenseService {
     }
     
     func getSplitExpenses(forUserID: UUID) async throws -> [SplitExpense] {
-        let snapshot = try await db.collection("splitExpenses")
+        // Get expenses where user is either creator or payer
+        let creatorSnapshot = try await db.collection("splitExpenses")
             .whereField("creatorID", isEqualTo: forUserID.uuidString)
             .getDocuments()
-        return try snapshot.documents.compactMap { try $0.data(as: SplitExpense.self) }
+        
+        let payerSnapshot = try await db.collection("splitExpenses")
+            .whereField("payerID", isEqualTo: forUserID.uuidString)
+            .getDocuments()
+        
+        var splitExpenses = try creatorSnapshot.documents.compactMap { try $0.data(as: SplitExpense.self) }
+        let payerExpenses = try payerSnapshot.documents.compactMap { try $0.data(as: SplitExpense.self) }
+        
+        // Add payer expenses that aren't already included (where user is payer but not creator)
+        for expense in payerExpenses {
+            if !splitExpenses.contains(where: { $0.id == expense.id }) {
+                splitExpenses.append(expense)
+            }
+        }
+        
+        return splitExpenses
     }
     
     func getAllSplitExpenses() async throws -> [SplitExpense] {
