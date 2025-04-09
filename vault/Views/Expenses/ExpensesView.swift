@@ -19,6 +19,17 @@ struct ExpensesView: View {
                         variableExpenses: viewModel.monthlyVariableExpenses
                     )
                     
+                    if !viewModel.outstandingPayments.isEmpty || !viewModel.splitExpenses.isEmpty {
+                        OutstandingPaymentsCard(
+                            outstandingPayments: viewModel.outstandingPayments,
+                            splitExpenses: viewModel.splitExpenses,
+                            splitParticipants: viewModel.splitParticipants,
+                            users: viewModel.users,
+                            categories: viewModel.categories
+                        )
+                        .cardBackground()
+                    }
+                    
                     ExpenseCategoryBreakdownCard(
                         categories: viewModel.categories,
                         categoryExpenses: viewModel.categoryExpenses
@@ -33,10 +44,18 @@ struct ExpensesView: View {
                         fixedExpenses: viewModel.fixedExpenses,
                         categories: viewModel.categories
                     )
+                    
+                    ForEach(viewModel.savingsGoals) { goal in
+                        SavingsGoalCard(
+                            goal: goal,
+                            progress: goal.currentAmount / goal.targetAmount
+                        )
+                    }
                 }
             }
             .padding()
         }
+        .appBackground()
         .navigationTitle("Expenses")
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {

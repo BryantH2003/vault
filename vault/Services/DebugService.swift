@@ -20,7 +20,8 @@ class DebugService {
             "sharedDataSettings",
             "splitExpenses",
             "splitExpenseParticipants",
-            "vendors"
+            "vendors",
+            "outstandingPayments"
         ]
         
         // Delete all documents in each collection
@@ -67,7 +68,7 @@ class DebugService {
         print("Created incomes")
         
         try await createDummyBudget(forUserID: userID, categories: categories)
-        print("Created incomes")
+        print("Created budgets")
         
         try await createDummySavingsGoals(forUserID: userID)
         print("Created saving goals")
@@ -80,21 +81,17 @@ class DebugService {
         try await createDummyFriendships(forUserID: userID, withUsers: additionalUsers)
         print("Created friendships")
         
-        try await createDummySplitExpenses(between: additionalUsers)
+        // Create split expenses between current user and all dummy users
+        try await createDummySplitExpenses(forUserID: userID, between: additionalUsers)
         print("Created split expenses")
         
         // Create vendors
         try await createDummyVendors(categoryIDs: categories.map { $0.id })
         print("Created vendors")
         
-        // Create split expenses between current user and first dummy user
-        if let firstDummyUser = additionalUsers.first {
-            try await createDummySplitExpenses(between: [
-                try await databaseService.getUser(id: userID),
-                firstDummyUser
-            ].compactMap { $0 })
-        }
-        print("Created split expenses")
+        // Create outstanding payments
+        try await createDummyOutstandingPayments(forUserID: userID, categories: categories)
+        print("Created outstanding payments")
         
         print("Finished creating dummy data")
     }
@@ -136,9 +133,9 @@ class DebugService {
     
     private func createDummyFixedExpenses(forUserID userId: UUID, categories: [Category]) async throws {
         let fixedExpenses = [
-            FixedExpense(id: UUID(), userID: userId, categoryID: categories[1].id, title: "Monthly Rent", amount: 2000.00, dueDate: Date().addingTimeInterval(86400 * 7), transactionDate: Date()),
-            FixedExpense(id: UUID(), userID: userId, categoryID: categories[2].id, title: "Electricity Bill", amount: 150.00, dueDate: Date().addingTimeInterval(86400 * 14), transactionDate: Date()),
-            FixedExpense(id: UUID(), userID: userId, categoryID: categories[2].id, title: "Internet Bill", amount: 80.00, dueDate: Date().addingTimeInterval(86400 * 21), transactionDate: Date())
+            FixedExpense(id: UUID(), userID: userId, categoryID: categories[1].id, title: "Monthly Rent", amount: 1500.00, dueDate: Date().addingTimeInterval(86400 * 30), isRecurring: true, recurringFrequency: "Monthly"),
+            FixedExpense(id: UUID(), userID: userId, categoryID: categories[2].id, title: "Internet Bill", amount: 89.99, dueDate: Date().addingTimeInterval(86400 * 30), isRecurring: true, recurringFrequency: "Monthly"),
+            FixedExpense(id: UUID(), userID: userId, categoryID: categories[2].id, title: "Car Insurance", amount: 450.00, dueDate: Date().addingTimeInterval(86400 * 90), isRecurring: true, recurringFrequency: "Quarterly")
         ]
         
         for fixedExpense in fixedExpenses {
@@ -212,52 +209,72 @@ class DebugService {
         }
     }
     
-    private func createDummySplitExpenses(between users: [User]) async throws {
+    private func createDummySplitExpenses(forUserID userID: UUID, between users: [User]) async throws {
         guard users.count >= 2 else {
             print("Need at least 2 users to create split expenses")
             return
         }
         
         let splitExpenses = [
+            // Expenses where current user is the payer
             SplitExpense(
-                expenseDescription: "Dinner",
+                expenseDescription: "Dinner at Italian Restaurant",
                 totalAmount: 150.00,
-                payerID: users[1].id,
+                payerID: userID,
                 creatorID: users[0].id,
                 creationDate: Date()
             ),
             SplitExpense(
+                expenseDescription: "Groceries for Party",
+                totalAmount: 200.00,
+                payerID: users[1].id,
+                creatorID: userID,
+                creationDate: Date().addingTimeInterval(-172800)
+            ),
+            
+            // Expenses where current user owes others
+            SplitExpense(
                 expenseDescription: "Movie Night",
                 totalAmount: 90.00,
-                payerID: users[1].id,
-                creatorID: users[0].id,
+                payerID: users[0].id,
+                creatorID: userID,
                 creationDate: Date().addingTimeInterval(-86400)
             ),
             SplitExpense(
-                expenseDescription: "Groceries",
-                totalAmount: 200.00,
-                payerID: users[1].id,
-                creatorID: users[0].id,
-                creationDate: Date().addingTimeInterval(-172800)
+                expenseDescription: "Concert Tickets",
+                totalAmount: 300.00,
+                payerID: userID,
+                creatorID: users[1].id,
+                creationDate: Date().addingTimeInterval(-259200)
             )
         ]
         
         print("Creating \(splitExpenses.count) split expenses...")
+        
         for splitExpense in splitExpenses {
             let createdSplitExpense = try await databaseService.createSplitExpense(splitExpense)
-            
-            // Create participants for each split expense
             let amountPerPerson = splitExpense.totalAmount / 2.0 // Split between 2 people
             
-            // Create participant for the second user
-            let participant = SplitExpenseParticipant(
-                splitID: createdSplitExpense.id,
-                userID: users[1].id,
-                amountDue: amountPerPerson,
-                status: "pending"
-            )
+            if splitExpense.payerID == userID {
+                // If user logged in is the payer that means the user logged in owes someone
+                let participant = SplitExpenseParticipant(
+                    splitID: createdSplitExpense.id,
+                    userID: userID,
+                    amountDue: amountPerPerson,
+                    status: "Pending"
+                )
+                try await databaseService.createSplitExpenseParticipant(participant)
+            } else {
+                // Others paid, create participant for current user
+                let participant = SplitExpenseParticipant(
+                    splitID: createdSplitExpense.id,
+                    userID: createdSplitExpense.payerID,
+                    amountDue: amountPerPerson,
+                    status: "Pending"
+                )
+                try await databaseService.createSplitExpenseParticipant(participant)
+            }
             
-            try await databaseService.createSplitExpenseParticipant(participant)
             print("Created split expense: \(splitExpense.expenseDescription) with participant")
         }
         print("Finished creating split expenses")
@@ -357,5 +374,52 @@ class DebugService {
         return createdUsers
     }
     
+    // MARK: - Create Dummy Outstanding Payments
+    private func createDummyOutstandingPayments(forUserID: UUID, categories: [Category]) async throws {
+        print("Creating dummy outstanding payments...")
+        
+        let calendar = Calendar.current
+        let currentDate = Date()
+        
+        let payments = [
+            OutstandingPayment(
+                userID: forUserID,
+                categoryID: categories[0].id,
+                title: "Car Loan",
+                amount: 1500.00,
+                dueDate: Date().addingTimeInterval(86400 * 7),
+                description: "Car loan payment",
+                isPaid: false,
+                priority: .high
+            ),
+            OutstandingPayment(
+                userID: forUserID,
+                categoryID: categories[1].id,
+                title: "Vacation Flights",
+                amount: 89.99,
+                dueDate: Date().addingTimeInterval(86400 * 14),
+                description: "Owe mom for tickets",
+                isPaid: false,
+                priority: .medium
+            ),
+            OutstandingPayment(
+                userID: forUserID,
+                categoryID: categories[2].id,
+                title: "House Mortage",
+                amount: 150.00,
+                dueDate: Date().addingTimeInterval(86400 * 21),
+                description: "Mortage on the hosuse",
+                isPaid: false,
+                priority: .low
+            )
+        ]
+        
+        print("Creating \(payments.count) outstanding payments...")
+        for payment in payments {
+            try await databaseService.createOutstandingPayment(payment)
+            print("Created outstanding payment: \(payment.title)")
+        }
+        print("Finished creating outstanding payments")
+    }
 } 
 

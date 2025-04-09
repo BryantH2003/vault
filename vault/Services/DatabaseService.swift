@@ -93,6 +93,17 @@ protocol DatabaseService {
     func getVendors(forCategoryID: UUID) async throws -> [Vendor]
     func searchVendors(query: String) async throws -> [Vendor]
     func getFrequentVendors(forUserID: UUID, limit: Int) async throws -> [Vendor]
+    
+    // MARK: - Outstanding Payment Operations
+    func createOutstandingPayment(_ payment: OutstandingPayment) async throws -> OutstandingPayment
+    func getOutstandingPayment(id: UUID) async throws -> OutstandingPayment?
+    func getOutstandingPayments(forUserID: UUID) async throws -> [OutstandingPayment]
+    func updateOutstandingPayment(_ payment: OutstandingPayment) async throws -> OutstandingPayment
+    func deleteOutstandingPayment(id: UUID) async throws
+    func getOutstandingPayments(forCategoryID: UUID) async throws -> [OutstandingPayment]
+    func getTotalOutstandingAmount(forUserID: UUID) async throws -> Double
+    func getOverduePayments(forUserID: UUID) async throws -> [OutstandingPayment]
+    func markOutstandingPaymentAsPaid(_ payment: OutstandingPayment) async throws -> OutstandingPayment
 }
     
 

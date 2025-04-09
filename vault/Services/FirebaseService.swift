@@ -427,4 +427,41 @@ class FirebaseService: DatabaseService {
     func getFrequentVendors(forUserID: UUID, limit: Int = 5) async throws -> [Vendor] {
         return try await VendorService.shared.getFrequentVendors(forUserID: forUserID, limit: limit)
     }
+    
+    // MARK: - Outstanding Payment Operations
+    func createOutstandingPayment(_ payment: OutstandingPayment) async throws -> OutstandingPayment {
+        return try await OutstandingService.shared.createOutstandingPayment(payment)
+    }
+    
+    func getOutstandingPayment(id: UUID) async throws -> OutstandingPayment? {
+        return try await OutstandingService.shared.getOutstandingPayment(id: id)
+    }
+    
+    func getOutstandingPayments(forUserID: UUID) async throws -> [OutstandingPayment] {
+        return try await OutstandingService.shared.getOutstandingPayments(forUserID: forUserID)
+    }
+    
+    func updateOutstandingPayment(_ payment: OutstandingPayment) async throws -> OutstandingPayment {
+        return try await OutstandingService.shared.updateOutstandingPayment(payment)
+    }
+    
+    func deleteOutstandingPayment(id: UUID) async throws {
+        try await OutstandingService.shared.deleteOutstandingPayment(id: id)
+    }
+    
+    func getOutstandingPayments(forCategoryID: UUID) async throws -> [OutstandingPayment] {
+        return try await OutstandingService.shared.getOutstandingPayments(forCategoryID: forCategoryID)
+    }
+    
+    func getTotalOutstandingAmount(forUserID: UUID) async throws -> Double {
+        return try await OutstandingService.shared.getTotalOutstandingAmount(forUserID: forUserID)
+    }
+    
+    func getOverduePayments(forUserID: UUID) async throws -> [OutstandingPayment] {
+        return try await OutstandingService.shared.getOverduePayments(forUserID: forUserID)
+    }
+    
+    func markOutstandingPaymentAsPaid(_ payment: OutstandingPayment) async throws -> OutstandingPayment {
+        return try await OutstandingService.shared.markAsPaid(payment)
+    }
 } 

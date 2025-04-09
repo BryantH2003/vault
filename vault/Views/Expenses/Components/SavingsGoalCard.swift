@@ -8,7 +8,7 @@ struct SavingsGoalCard: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text(goal.goalName)
-                    .font(.headline)
+                    .figtreeFont(.semibold, size: 16)
                 Spacer()
                 Text(goal.targetAmount, format: .currency(code: "USD"))
                     .fontWeight(.semibold)
@@ -19,7 +19,7 @@ struct SavingsGoalCard: View {
                     .tint(.blue)
                 
                 HStack {
-                    Text("Current: ")
+                    Text("Saved: ")
                         .foregroundColor(.secondary)
                     Text(goal.currentAmount, format: .currency(code: "USD"))
                         .fontWeight(.medium)
@@ -43,5 +43,6 @@ struct SavingsGoalCard: View {
         .background(Color(.systemBackground))
         .cornerRadius(12)
         .shadow(radius: 2)
+        .figtreeFont(.regular, size: 16)
     }
 } 

@@ -62,8 +62,8 @@ class SplitExpenseParticipantService {
     /// Get unpaid participants for an expense
     func getUnpaidParticipants(forExpenseID: UUID) async throws -> [SplitExpenseParticipant] {
         let snapshot = try await db.collection("splitExpenseParticipants")
-            .whereField("expenseID", isEqualTo: forExpenseID.uuidString)
-            .whereField("hasPaid", isEqualTo: false)
+            .whereField("splitID", isEqualTo: forExpenseID.uuidString)
+            .whereField("status", isNotEqualTo: "Paid")
             .getDocuments()
         return try snapshot.documents.compactMap { try $0.data(as: SplitExpenseParticipant.self) }
     }
@@ -71,8 +71,8 @@ class SplitExpenseParticipantService {
     /// Get paid participants for an expense
     func getPaidParticipants(forExpenseID: UUID) async throws -> [SplitExpenseParticipant] {
         let snapshot = try await db.collection("splitExpenseParticipants")
-            .whereField("expenseID", isEqualTo: forExpenseID.uuidString)
-            .whereField("hasPaid", isEqualTo: true)
+            .whereField("splitID", isEqualTo: forExpenseID.uuidString)
+            .whereField("status", isEqualTo: "Paid")
             .getDocuments()
         return try snapshot.documents.compactMap { try $0.data(as: SplitExpenseParticipant.self) }
     }
