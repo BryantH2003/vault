@@ -45,6 +45,7 @@ struct FixedExpensesCard: View {
         .background(Color(.systemBackground))
         .cornerRadius(12)
         .shadow(radius: 2)
+        .figtreeFont(.regular, size: 16)
     }
 }
 

@@ -12,7 +12,7 @@ struct SplitExpenseParticipant: Identifiable, Codable {
          splitID: UUID,
          userID: UUID,
          amountDue: Double,
-         status: String = "Pending") {
+         status: String = PaymentStatus.pending.rawValue) {
         self.id = id
         self.splitID = splitID
         self.userID = userID

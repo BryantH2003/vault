@@ -10,12 +10,22 @@ class ExpensesViewModel: ObservableObject {
     @Published var fixedExpenses: [Expense] = []
     @Published var categories: [UUID: Category] = [:]
     @Published var categoryExpenses: [UUID: Double] = [:]
+    @Published var outstandingPayments: [OutstandingPayment] = []
+    @Published var splitExpenses: [SplitExpense] = []
+    @Published var splitParticipants: [UUID: [SplitExpenseParticipant]] = [:]
+    @Published var users: [UUID: User] = [:]
+    @Published var savingsGoals: [SavingsGoal] = []
     @Published var isLoading = false
     @Published var error: Error?
     @Published var showingAddExpense = false
     
     private let expenseService = ExpenseService.shared
     private let categoryService = CategoryService.shared
+    private let outstandingService = OutstandingService.shared
+    private let splitExpenseService = SplitExpenseService.shared
+    private let splitExpenseParticipantService = SplitExpenseParticipantService.shared
+    private let userService = UserService.shared
+    private let savingsGoalService = SavingsGoalService.shared
     
     func loadExpensesData(forUserID userID: UUID) async {
         print("Starting to load expenses data for user: \(userID)")
@@ -63,6 +73,32 @@ class ExpensesViewModel: ObservableObject {
             recentExpenses = Array(monthlyExpensesList
                 .sorted(by: { $0.transactionDate > $1.transactionDate })
                 .prefix(5))
+            
+            // Load outstanding payments
+            print("Loading outstanding payments")
+            outstandingPayments = try await outstandingService.getOutstandingPayments(forUserID: userID)
+            
+            // Load split expenses
+            print("Loading split expenses")
+            splitExpenses = try await splitExpenseService.getUnpaidSplitExpenses(userID: userID)
+            
+            // Load split expense participants
+            for expense in splitExpenses {
+                let participants = try await splitExpenseParticipantService.getUnpaidParticipants(forExpenseID: expense.id)
+                splitParticipants[expense.id] = participants
+            }
+            
+            // Load users for split expenses
+            let userIDs = Set(splitExpenses.map { $0.payerID } + splitParticipants.values.flatMap { $0.map { $0.userID } })
+            for userID in userIDs {
+                if let user = try await userService.getUser(id: userID) {
+                    users[userID] = user
+                }
+            }
+            
+            // Load savings goals
+            print("Loading savings goals")
+            savingsGoals = try await savingsGoalService.getSavingsGoals(forUserID: userID)
             
             print("Data loading completed successfully")
             print("Monthly total: \(monthlyExpenses)")

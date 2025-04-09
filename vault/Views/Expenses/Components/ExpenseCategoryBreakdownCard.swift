@@ -19,7 +19,7 @@ struct ExpenseCategoryBreakdownCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Category Breakdown")
-                .font(.headline)
+                .figtreeFont(.semibold, size: 18)
                 .foregroundColor(.primary)
             
             if sortedCategories.isEmpty {
@@ -47,6 +47,7 @@ struct ExpenseCategoryBreakdownCard: View {
         .background(Color(.systemBackground))
         .cornerRadius(12)
         .shadow(radius: 2)
+        .figtreeFont(.regular, size: 16)
     }
 }
 

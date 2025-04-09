@@ -1,7 +1,7 @@
 import Foundation
 
 /// Represents a split expense between users in the application
-struct SplitExpense: Identifiable, Codable {
+struct SplitExpense: Identifiable, Codable, Hashable {
     let id: UUID
     var expenseDescription: String
     var totalAmount: Double
@@ -69,5 +69,15 @@ struct SplitExpense: Identifiable, Codable {
         try container.encode(payerID.uuidString, forKey: .payerID)
         try container.encode(creatorID.uuidString, forKey: .creatorID)
         try container.encode(creationDate, forKey: .creationDate)
+    }
+    
+    // MARK: - Hashable
+    
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+    
+    static func == (lhs: SplitExpense, rhs: SplitExpense) -> Bool {
+        lhs.id == rhs.id
     }
 } 
