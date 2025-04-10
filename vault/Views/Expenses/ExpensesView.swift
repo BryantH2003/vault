@@ -2,11 +2,24 @@ import SwiftUI
 
 struct ExpensesView: View {
     @StateObject private var viewModel = ExpensesViewModel()
+    @State private var showingMonthPicker = false
     let userID: UUID
     
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
+                // Month selector button
+                Button(action: { showingMonthPicker = true }) {
+                    HStack {
+                        Text(Date.monthYearString(from: viewModel.selectedDate))
+                            .cardTitleStyle()
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 14, weight: .semibold))
+                    }
+                    .foregroundColor(.primary)
+                    .padding(.vertical, 8)
+                }
+                
                 if viewModel.isLoading {
                     ProgressView()
                         .padding()
@@ -16,8 +29,18 @@ struct ExpensesView: View {
                     MonthlyExpenseSummaryCard(
                         totalExpenses: viewModel.monthlyExpenses,
                         fixedExpenses: viewModel.monthlyFixedExpenses,
-                        variableExpenses: viewModel.monthlyVariableExpenses
+                        variableExpenses: viewModel.monthlyVariableExpenses,
+                        previousTotalExpenses: viewModel.previousMonthExpenses,
+                        previousTotalFixedExpenses: viewModel.previousMonthFixedExpenses,
+                        previousTotalVariableExpenses: viewModel.previousMonthVariableExpenses
                     )
+                    .cardBackground()
+                    
+                    FixedExpensesCard(
+                        fixedExpenses: viewModel.fixedExpenses,
+                        categories: viewModel.categories
+                    )
+                    .cardBackground()
                     
                     if !viewModel.outstandingPayments.isEmpty || !viewModel.splitExpenses.isEmpty {
                         OutstandingPaymentsCard(
@@ -40,11 +63,6 @@ struct ExpensesView: View {
                         categories: viewModel.categories
                     )
                     
-                    FixedExpensesCard(
-                        fixedExpenses: viewModel.fixedExpenses,
-                        categories: viewModel.categories
-                    )
-                    
                     ForEach(viewModel.savingsGoals) { goal in
                         SavingsGoalCard(
                             goal: goal,
@@ -56,7 +74,10 @@ struct ExpensesView: View {
             .padding()
         }
         .appBackground()
-        .navigationTitle("Expenses")
+        .sheet(isPresented: $showingMonthPicker) {
+            MonthPickerView(selectedDate: $viewModel.selectedDate, showPicker: $showingMonthPicker)
+                .presentationDetents([.height(300)])
+        }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: { viewModel.showingAddExpense = true }) {

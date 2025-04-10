@@ -56,24 +56,21 @@ private struct TransactionRow: View {
             // Expense Details
             VStack(alignment: .leading, spacing: 4) {
                 Text(expense.title)
-                    .fontWeight(.medium)
+                    .cardRowTitleStyle()
                 
                 HStack {
                     if let category = category {
                         Text(category.categoryName)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                            .secondaryTitleStyle()
                     }
                     
                     if let vendor = expense.vendor {
                         if category != nil {
                             Text("•")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                                .secondaryTitleStyle()
                         }
                         Text(vendor)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                            .secondaryTitleStyle()
                     }
                 }
             }
@@ -83,12 +80,10 @@ private struct TransactionRow: View {
             // Amount and Date
             VStack(alignment: .trailing, spacing: 4) {
                 Text(expense.amount, format: .currency(code: "USD"))
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                    .cardRowAmountStyle()
                 
                 Text(expense.transactionDate, style: .date)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                    .secondaryTitleStyle()
             }
         }
     }

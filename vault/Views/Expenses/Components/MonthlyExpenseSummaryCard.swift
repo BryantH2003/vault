@@ -4,17 +4,31 @@ struct MonthlyExpenseSummaryCard: View {
     let totalExpenses: Double
     let fixedExpenses: Double
     let variableExpenses: Double
+    let previousTotalExpenses: Double
+    let previousTotalFixedExpenses: Double
+    let previousTotalVariableExpenses: Double
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Monthly Overview")
-                .font(.headline)
-                .foregroundColor(.primary)
+            Text("Monthly Expenses")
+                .cardTitleStyle()
             
             VStack(spacing: 12) {
-                ExpenseSummaryRow(title: "Total Expenses", amount: totalExpenses, color: .red)
-                ExpenseSummaryRow(title: "Fixed Expenses", amount: fixedExpenses, color: .blue)
-                ExpenseSummaryRow(title: "Variable Expenses", amount: variableExpenses, color: .orange)
+                OverviewSummaryRow(
+                    title: "Total Expenses",
+                    amount: totalExpenses,
+                    previousAmount: previousTotalExpenses
+                )
+                OverviewSummaryRow(
+                    title: "Fixed Expenses",
+                    amount: fixedExpenses,
+                    previousAmount: previousTotalFixedExpenses
+                )
+                OverviewSummaryRow(
+                    title: "Variable Expenses",
+                    amount: variableExpenses,
+                    previousAmount: previousTotalVariableExpenses
+                )
                 
                 Divider()
                 
@@ -36,26 +50,6 @@ struct MonthlyExpenseSummaryCard: View {
             }
         }
         .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
-        .shadow(radius: 2)
-        .figtreeFont(.regular, size: 16)
     }
 }
 
-private struct ExpenseSummaryRow: View {
-    let title: String
-    let amount: Double
-    let color: Color
-    
-    var body: some View {
-        HStack {
-            Text(title)
-                .foregroundColor(.secondary)
-            Spacer()
-            Text(amount, format: .currency(code: "USD"))
-                .foregroundColor(color)
-                .fontWeight(.semibold)
-        }
-    }
-} 

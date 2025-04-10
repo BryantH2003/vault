@@ -61,12 +61,12 @@ class DashboardViewModel: ObservableObject {
             print("Loading data for previous month: \(previousStartDate) to \(previousEndDate)")
             
             // Load categories first as they're referenced by expenses
-            print("Loading categories")
+            // print("Loading categories")
             let allCategories = try await categoryService.getAllCategories()
             categories = Dictionary(uniqueKeysWithValues: allCategories.map { ($0.id, $0) })
             
             // Load split expenses
-            print("Loading split expenses")
+            // print("Loading split expenses")
             
             // Get expenses where you owe others (you are participant, not payer)
             let expensesYouOwe = try await splitExpenseService.getSplitExpensesUserOwes(forUserID: userID)
@@ -76,22 +76,22 @@ class DashboardViewModel: ObservableObject {
             let expensesOtherOweYou = try await splitExpenseService.getSplitExpensesOthersOweUser(userID: userID)
             splitExpensesOwedToYou = expensesOtherOweYou.filter { $0.payerID != userID }
             
-            print("You owe: \(splitExpensesYouOwe.count) split expenses")
-            print(splitExpensesYouOwe)
-            print("Split expenses you owe details:")
-            for expense in splitExpensesYouOwe {
-                print("- Description: \(expense.expenseDescription), Amount: \(expense.totalAmount), Person Owed: \(expense.creatorID)")
-            }
+            // print("You owe: \(splitExpensesYouOwe.count) split expenses")
+            // print(splitExpensesYouOwe)
+            // print("Split expenses you owe details:")
+            //for expense in splitExpensesYouOwe {
+            //    print("- Description: \(expense.expenseDescription), Amount: \(expense.totalAmount), Person Owed: \(expense.creatorID)")
+            //}
             
-            print("Owed to you: \(splitExpensesOwedToYou.count) split expenses")
-            print(splitExpensesOwedToYou)
-            print("Split expenses owed to you details:")
-            for expense in splitExpensesOwedToYou {
-                print("- Description: \(expense.expenseDescription), Amount: \(expense.totalAmount), Payer: \(expense.payerID)")
-            }
+            // print("Owed to you: \(splitExpensesOwedToYou.count) split expenses")
+            // print(splitExpensesOwedToYou)
+            // print("Split expenses owed to you details:")
+            // for expense in splitExpensesOwedToYou {
+            //    print("- Description: \(expense.expenseDescription), Amount: \(expense.totalAmount), Payer: \(expense.payerID)")
+            // }
             
             // Load split expense participants and user details
-            print("Loading split expense participants")
+            //print("Loading split expense participants")
             let allSplitExpenses = splitExpensesYouOwe + splitExpensesOwedToYou
             for expense in allSplitExpenses {
                 let participants = try await splitExpenseParticipantService.getUnpaidParticipants(forExpenseID: expense.id)
@@ -103,7 +103,7 @@ class DashboardViewModel: ObservableObject {
                     if users[participantID] == nil {
                         if let user = try await userService.getUser(id: participantID) {
                             users[participantID] = user
-                            print("Loaded user: \(user.fullName) for split expense")
+                            //print("Loaded user: \(user.fullName) for split expense")
                         }
                     }
                 }

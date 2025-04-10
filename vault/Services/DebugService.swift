@@ -123,7 +123,9 @@ class DebugService {
         let expenses = [
             Expense(id: UUID(), userID: userId, categoryID: categories[0].id, title: "Weekly Groceries", amount: 150.00, transactionDate: Date(), vendor: "Whole Foods"),
             Expense(id: UUID(), userID: userId, categoryID: categories[3].id, title: "Movie Night", amount: 30.00, transactionDate: Date().addingTimeInterval(-86400), vendor: "AMC"),
-            Expense(id: UUID(), userID: userId, categoryID: categories[3].id, title: "Concert Tickets", amount: 120.00, transactionDate: Date().addingTimeInterval(-172800), vendor: "Ticketmaster")
+            Expense(id: UUID(), userID: userId, categoryID: categories[3].id, title: "Concert Tickets", amount: 120.00, transactionDate: Date().addingTimeInterval(-172800), vendor: "Ticketmaster"),
+            Expense(id: UUID(), userID: userId, categoryID: categories[1].id, title: "Test Expense", amount: 220.00, transactionDate: Date().addingTimeInterval(-872800), vendor: "Wing Stop"),
+            Expense(id: UUID(), userID: userId, categoryID: categories[2].id, title: "Test Expense", amount: 50.00, transactionDate: Date().addingTimeInterval(-972800), vendor: "Kroger")
         ]
         
         for expense in expenses {

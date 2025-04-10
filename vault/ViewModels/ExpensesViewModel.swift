@@ -3,6 +3,7 @@ import Combine
 
 @MainActor
 class ExpensesViewModel: ObservableObject {
+    @Published var monthlyIncome: Double = 0
     @Published var monthlyExpenses: Double = 0
     @Published var monthlyFixedExpenses: Double = 0
     @Published var monthlyVariableExpenses: Double = 0
@@ -19,7 +20,27 @@ class ExpensesViewModel: ObservableObject {
     @Published var error: Error?
     @Published var showingAddExpense = false
     
+    // Previous month data
+    @Published var previousMonthIncome: Double = 0
+    @Published var previousMonthExpenses: Double = 0
+    @Published var previousMonthFixedExpenses: Double = 0
+    @Published var previousMonthVariableExpenses: Double = 0
+    @Published var previousMonthSavings: Double = 0
+    
+    @Published var selectedDate: Date = Date() {
+        didSet {
+            if let currentUserID = currentUserID {
+                Task {
+                    await loadExpensesData(forUserID: currentUserID)
+                }
+            }
+        }
+    }
+    
+    private var currentUserID: UUID?
+    
     private let expenseService = ExpenseService.shared
+    private let incomeService = IncomeService.shared
     private let categoryService = CategoryService.shared
     private let outstandingService = OutstandingService.shared
     private let splitExpenseService = SplitExpenseService.shared
@@ -28,51 +49,91 @@ class ExpensesViewModel: ObservableObject {
     private let savingsGoalService = SavingsGoalService.shared
     
     func loadExpensesData(forUserID userID: UUID) async {
-        print("Starting to load expenses data for user: \(userID)")
         isLoading = true
         error = nil
+        currentUserID = userID
         
         do {
-            // Load categories first
-            print("Fetching categories")
+            // --- Monthly Overview Card Data ---
+            
+            // Get date range for selected month
+            let startDate = selectedDate.startOfMonth()
+            let endDate = selectedDate.endOfMonth()
+            
+            // Get date range for previous month
+            let calendar = Calendar.current
+            guard let previousMonthDate = calendar.date(byAdding: .month, value: -1, to: selectedDate),
+                  let previousStartDate = calendar.date(from: calendar.dateComponents([.year, .month], from: previousMonthDate)),
+                  let previousEndDate = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: previousStartDate) else {
+                throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Error calculating previous month dates"])
+            }
+            
+            print("Loading data for month: \(Date.monthYearString(from: selectedDate))")
+            print("Date range: \(startDate) to \(endDate)")
+            
+            // Load categories first as they're referenced by expenses
+            print("Loading categories")
             let allCategories = try await categoryService.getAllCategories()
             categories = Dictionary(uniqueKeysWithValues: allCategories.map { ($0.id, $0) })
-            print("Retrieved \(allCategories.count) categories")
-            
-            // Get current month's date range
-            let currentDate = Date()
-            let calendar = Calendar.current
-            let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: currentDate))!
-            let endOfMonth = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: startOfMonth)!
             
             // Load monthly expenses
-            print("Fetching expenses from \(startOfMonth) to \(endOfMonth)")
-            let monthlyExpensesList = try await expenseService.getExpenses(forUserID: userID, in: startOfMonth...endOfMonth)
-            
-            // Calculate totals
+            print("Loading monthly expenses")
+            let monthlyExpensesList = try await expenseService.getExpenses(forUserID: userID, in: startDate...endDate)
             monthlyExpenses = monthlyExpensesList.reduce(0) { $0 + $1.amount }
             
-            // Separate fixed and variable expenses
-            let (fixed, variable) = monthlyExpensesList.reduce(into: ([Expense](), [Expense]())) { result, expense in
+            // Calculate fixed and variable expenses
+            let (fixed, variable) = monthlyExpensesList.reduce(into: (0.0, 0.0)) { result, expense in
                 if let category = categories[expense.categoryID], category.fixedExpense {
-                    result.0.append(expense)
+                    result.0 += expense.amount
                 } else {
-                    result.1.append(expense)
+                    result.1 += expense.amount
+                }
+            }
+            monthlyFixedExpenses = fixed
+            monthlyVariableExpenses = variable
+            
+            // Load previous month expenses
+            print("Loading previous month expenses")
+            let previousExpensesList = try await expenseService.getExpenses(forUserID: userID, in: previousStartDate...previousEndDate)
+            previousMonthExpenses = previousExpensesList.reduce(0) { $0 + $1.amount }
+            
+            // Calculate fixed and variable expenses for previous month
+            let (prevFixed, prevVariable) = previousExpensesList.reduce(into: (0.0, 0.0)) { result, expense in
+                if let category = categories[expense.categoryID], category.fixedExpense {
+                    result.0 += expense.amount
+                } else {
+                    result.1 += expense.amount
                 }
             }
             
-            fixedExpenses = fixed.sorted(by: { $0.transactionDate > $1.transactionDate })
-            monthlyFixedExpenses = fixed.reduce(0) { $0 + $1.amount }
-            monthlyVariableExpenses = variable.reduce(0) { $0 + $1.amount }
+            previousMonthFixedExpenses = prevFixed
+            previousMonthVariableExpenses = prevVariable
+            print("Previous Month Expenses Calculated:", previousMonthFixedExpenses, previousMonthVariableExpenses)
             
-            // Calculate category totals
+            // Load current month income
+            print("Loading current month income")
+            let monthlyIncomeList = try await incomeService.getIncomes(forUserID: userID, in: startDate...endDate)
+            monthlyIncome = monthlyIncomeList.reduce(0) { $0 + $1.amount }
+            
+            // Load previous month income
+            print("Loading previous month income")
+            let previousIncomeList = try await incomeService.getIncomes(forUserID: userID, in: previousStartDate...previousEndDate)
+            previousMonthIncome = previousIncomeList.reduce(0) { $0 + $1.amount }
+            
+            previousMonthSavings = previousMonthIncome - previousMonthExpenses
+            
+            // Get fixed expenses for the month
+            fixedExpenses = monthlyExpensesList.filter { expense in
+                categories[expense.categoryID]?.fixedExpense == true
+            }
+            
+            // Calculate category expenses
             categoryExpenses = Dictionary(grouping: monthlyExpensesList, by: { $0.categoryID })
                 .mapValues { expenses in expenses.reduce(0) { $0 + $1.amount } }
             
-            // Get recent expenses
+            // Get recent expenses for the month
             recentExpenses = Array(monthlyExpensesList
-                .sorted(by: { $0.transactionDate > $1.transactionDate })
-                .prefix(5))
+                .sorted(by: { $0.transactionDate > $1.transactionDate }))
             
             // Load outstanding payments
             print("Loading outstanding payments")
