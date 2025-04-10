@@ -49,7 +49,7 @@ class ExpenseService {
     }
     
     /// Get expenses for a user in a date range
-    func getExpenses(forUserID: UUID, in dateRange: ClosedRange<Date>) async throws -> [Expense] {
+    func getExpensesInDateRange(forUserID: UUID, in dateRange: ClosedRange<Date>) async throws -> [Expense] {
         print("Fetching expenses for user: \(forUserID) in date range: \(dateRange)")
         let snapshot = try await db.collection("expenses")
             .whereField("userID", isEqualTo: forUserID.uuidString)
@@ -62,7 +62,7 @@ class ExpenseService {
     }
     
     /// Get expenses for a user and category
-    func getExpenses(forUserID: UUID, categoryID: UUID) async throws -> [Expense] {
+    func getExpensesInCategory(forUserID: UUID, categoryID: UUID) async throws -> [Expense] {
         print("Fetching expenses for user: \(forUserID) in category: \(categoryID)")
         let snapshot = try await db.collection("expenses")
             .whereField("userID", isEqualTo: forUserID.uuidString)

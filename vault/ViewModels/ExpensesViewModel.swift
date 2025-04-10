@@ -55,7 +55,8 @@ class ExpensesViewModel: ObservableObject {
         currentUserID = userID
         
         do {
-            // --- Monthly Overview Card Data ---
+            print()
+            print("------ Expense View ------ ")
             
             // Get date range for selected month
             let startDate = selectedDate.startOfMonth()
@@ -69,67 +70,68 @@ class ExpensesViewModel: ObservableObject {
                 throw NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Error calculating previous month dates"])
             }
             
-            print("Loading data for month: \(Date.monthYearString(from: selectedDate))")
-            print("Date range: \(startDate) to \(endDate)")
-            
             // Load categories first as they're referenced by expenses
-            print("Loading categories")
+            // print("Loading categories")
             let allCategories = try await categoryService.getAllCategories()
             categories = Dictionary(uniqueKeysWithValues: allCategories.map { ($0.id, $0) })
             
-            // Load monthly expenses
-            print("Loading monthly expenses")
-            let monthlyExpensesList = try await expenseService.getExpenses(forUserID: userID, in: startDate...endDate)
+            // Load monthly expenses list
+            // print("Loading monthly expenses")
+            let monthlyExpensesList = try await expenseService.getExpensesInDateRange(forUserID: userID, in: startDate...endDate)
             monthlyExpensesTotal = monthlyExpensesList.reduce(0) { $0 + $1.amount }
             
-            // Calculate fixed and variable expenses
+            // Calculate variable expenses total for this month
             let variable = monthlyExpensesList.reduce(0) { $0 + $1.amount }
             
             monthlyVariableExpensesTotal = variable
             
-            // Load previous month expenses
-            print("Loading previous month expenses")
-            let previousExpensesList = try await expenseService.getExpenses(forUserID: userID, in: previousStartDate...previousEndDate)
+            // Load previous month expenses list
+            // print("Loading previous month expenses")
+            let previousExpensesList = try await expenseService.getExpensesInDateRange(forUserID: userID, in: previousStartDate...previousEndDate)
             previousMonthExpensesTotal = previousExpensesList.reduce(0) { $0 + $1.amount }
             
-            // Calculate fixed and variable expenses for previous month
-            let (prevVariable) = previousExpensesList.reduce(0) { $0 + $1.amount }
+            // Calculate variable expenses total for previous month
+            let prevVariable = previousExpensesList.reduce(0) { $0 + $1.amount }
             
             previousMonthVariableExpensesTotal = prevVariable
-            print("Previous Month Expenses Calculated:", previousMonthFixedExpensesTotal, previousMonthVariableExpensesTotal    )
             
-            // Load current month income
-            print("Loading current month income")
+            // Load current month income list
+            // print("Loading current month income")
             let monthlyIncomeList = try await incomeService.getIncomes(forUserID: userID, in: startDate...endDate)
+            
+            // Calculate total income for this month
             monthlyIncomeTotal = monthlyIncomeList.reduce(0) { $0 + $1.amount }
             
-            // Load previous month income
-            print("Loading previous month income")
+            // Load previous month income list
+            // print("Loading previous month income")
             let previousIncomeList = try await incomeService.getIncomes(forUserID: userID, in: previousStartDate...previousEndDate)
+            
+            // Calculate total income for previous month
             previousMonthIncomeTotal = previousIncomeList.reduce(0) { $0 + $1.amount }
             
+            // Calculate total savings for previous month
             previousMonthSavingsTotal = previousMonthIncomeTotal - previousMonthExpensesTotal
             
-            // Get fixed expenses for the month
+            // Get fixed expenses for the month list
             fixedExpensesList = try await fixedExpenseService.getFixedExpenses(forUserID: userID)
-            print("Retrieved fixed expenses:",fixedExpensesList.count)
             
+            // Calculate total fixed expense for this month
             monthlyFixedExpensesTotal = fixedExpensesList.reduce(0) { $0 + $1.amount }
             
             // Calculate category expenses
             categoryExpenses = Dictionary(grouping: monthlyExpensesList, by: { $0.categoryID })
                 .mapValues { expenses in expenses.reduce(0) { $0 + $1.amount } }
             
-            // Get recent expenses for the month
+            // Get recent expenses for the month list
             recentExpensesList = Array(monthlyExpensesList
                 .sorted(by: { $0.transactionDate > $1.transactionDate }))
             
-            // Load outstanding payments
-            print("Loading outstanding payments")
+            // Load outstanding payments list
+            // print("Loading outstanding payments")
             outstandingPaymentsList = try await outstandingService.getOutstandingPayments(forUserID: userID)
             
-            // Load split expenses
-            print("Loading split expenses")
+            // Load split expenses list
+            // print("Loading split expenses")
             splitExpensesList = try await splitExpenseService.getUnpaidSplitExpenses(userID: userID)
             
             // Load split expense participants
@@ -146,8 +148,8 @@ class ExpensesViewModel: ObservableObject {
                 }
             }
             
-            // Load savings goals
-            print("Loading savings goals")
+            // Load savings goals list
+            // print("Loading savings goals")
             savingsGoalsList = try await savingsGoalService.getSavingsGoals(forUserID: userID)
             
             print("Data loading completed successfully")

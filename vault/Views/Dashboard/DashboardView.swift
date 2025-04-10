@@ -27,19 +27,19 @@ struct DashboardView: View {
                     ErrorView(error: error)
                 } else {
                     MonthlyOverviewCard(
-                        totalExpenses: viewModel.monthlyExpenses,
-                        totalSavings: viewModel.monthlySavings,
-                        totalIncome: viewModel.monthlyIncome,
-                        previousTotalExpenses: viewModel.previousMonthExpenses,
-                        previousTotalSavings: viewModel.previousMonthSavings,
-                        previousTotalIncome: viewModel.previousMonthIncome
+                        totalExpenses: viewModel.monthlyExpensesTotal,
+                        totalSavings: viewModel.monthlySavingsTotal,
+                        totalIncome: viewModel.monthlyIncomeTotal,
+                        previousTotalExpenses: viewModel.previousMonthExpensesTotal,
+                        previousTotalSavings: viewModel.previousMonthSavingsTotal,
+                        previousTotalIncome: viewModel.previousMonthIncomeTotal
                     )
                     .cardBackground()
                     
-                    if !$viewModel.splitExpensesYouOwe.isEmpty || !$viewModel.splitExpensesOwedToYou.isEmpty {
+                    if !$viewModel.splitExpensesYouOweList.isEmpty || !$viewModel.splitExpensesOwedToYouList.isEmpty {
                         SplitExpensesOverviewCard(
-                            expensesYouOwe: viewModel.splitExpensesYouOwe,
-                            expensesOwedToYou: viewModel.splitExpensesOwedToYou,
+                            expensesYouOwe: viewModel.splitExpensesYouOweList,
+                            expensesOwedToYou: viewModel.splitExpensesOwedToYouList,
                             participants: viewModel.splitParticipants,
                             users: viewModel.users,
                             currentUserID: userID
@@ -48,7 +48,7 @@ struct DashboardView: View {
                     }
                     
                     RecentTransactionsCard(
-                        expenses: viewModel.recentExpenses,
+                        expenses: viewModel.recentExpensesList,
                         categories: viewModel.categories
                     )
                     .cardBackground()
