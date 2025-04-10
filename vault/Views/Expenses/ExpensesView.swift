@@ -27,25 +27,25 @@ struct ExpensesView: View {
                     ErrorView(error: error)
                 } else {
                     MonthlyExpenseSummaryCard(
-                        totalExpenses: viewModel.monthlyExpenses,
-                        fixedExpenses: viewModel.monthlyFixedExpenses,
-                        variableExpenses: viewModel.monthlyVariableExpenses,
-                        previousTotalExpenses: viewModel.previousMonthExpenses,
-                        previousTotalFixedExpenses: viewModel.previousMonthFixedExpenses,
-                        previousTotalVariableExpenses: viewModel.previousMonthVariableExpenses
+                        totalExpenses: viewModel.monthlyExpensesTotal,
+                        fixedExpenses: viewModel.monthlyFixedExpensesTotal,
+                        variableExpenses: viewModel.monthlyVariableExpensesTotal,
+                        previousTotalExpenses: viewModel.previousMonthExpensesTotal,
+                        previousTotalFixedExpenses: viewModel.previousMonthFixedExpensesTotal,
+                        previousTotalVariableExpenses: viewModel.previousMonthVariableExpensesTotal
                     )
                     .cardBackground()
                     
                     FixedExpensesCard(
-                        fixedExpenses: viewModel.fixedExpenses,
+                        fixedExpenses: viewModel.fixedExpensesList,
                         categories: viewModel.categories
                     )
                     .cardBackground()
                     
-                    if !viewModel.outstandingPayments.isEmpty || !viewModel.splitExpenses.isEmpty {
+                    if !viewModel.outstandingPaymentsList.isEmpty || !viewModel.splitExpensesList.isEmpty {
                         OutstandingPaymentsCard(
-                            outstandingPayments: viewModel.outstandingPayments,
-                            splitExpenses: viewModel.splitExpenses,
+                            outstandingPayments: viewModel.outstandingPaymentsList,
+                            splitExpenses: viewModel.splitExpensesList,
                             splitParticipants: viewModel.splitParticipants,
                             users: viewModel.users,
                             categories: viewModel.categories
@@ -59,11 +59,11 @@ struct ExpensesView: View {
                     )
                     
                     RecentTransactionsCard(
-                        expenses: viewModel.recentExpenses,
+                        expenses: viewModel.recentExpensesList,
                         categories: viewModel.categories
                     )
                     
-                    ForEach(viewModel.savingsGoals) { goal in
+                    ForEach(viewModel.savingsGoalsList) { goal in
                         SavingsGoalCard(
                             goal: goal,
                             progress: goal.currentAmount / goal.targetAmount
