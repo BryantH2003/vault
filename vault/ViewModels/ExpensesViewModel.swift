@@ -11,6 +11,7 @@ class ExpensesViewModel: ObservableObject {
     @Published var fixedExpensesList: [FixedExpense] = []
     @Published var categories: [UUID: Category] = [:]
     @Published var categoryExpenses: [UUID: Double] = [:]
+    @Published var previousMonthCategoryExpenses: [UUID: Double] = [:]
     @Published var outstandingPaymentsList: [OutstandingPayment] = []
     @Published var splitExpensesList: [SplitExpense] = []
     @Published var splitParticipants: [UUID: [SplitExpenseParticipant]] = [:]
@@ -118,9 +119,15 @@ class ExpensesViewModel: ObservableObject {
             // Calculate total fixed expense for this month
             monthlyFixedExpensesTotal = fixedExpensesList.reduce(0) { $0 + $1.amount }
             
-            // Calculate category expenses
+            // Calculate category expenses for current month
             categoryExpenses = Dictionary(grouping: monthlyExpensesList, by: { $0.categoryID })
                 .mapValues { expenses in expenses.reduce(0) { $0 + $1.amount } }
+            
+            // Calculate category expenses for previous month
+            previousMonthCategoryExpenses = Dictionary(grouping: previousExpensesList, by: { $0.categoryID })
+                .mapValues { expenses in expenses.reduce(0) { $0 + $1.amount } }
+            
+            print(previousMonthCategoryExpenses)
             
             // Get recent expenses for the month list
             recentExpensesList = Array(monthlyExpensesList

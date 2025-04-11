@@ -57,6 +57,9 @@ private struct FixedExpenseRow: View {
                 Text(expense.title)
                     .cardRowTitleStyle()
                 
+                Text(expense.dueDate, style: .date)
+                    .secondaryTitleStyle()
+                
                 HStack {
                     if let category = category {
                         Text(category.categoryName)

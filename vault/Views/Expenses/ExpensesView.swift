@@ -36,6 +36,13 @@ struct ExpensesView: View {
                     )
                     .cardBackground()
                     
+                    ExpenseCategoryBreakdownCard(
+                        categories: viewModel.categories,
+                        categoryExpenses: viewModel.categoryExpenses,
+                        previousMonthCategoryExpenses: viewModel.previousMonthCategoryExpenses
+                    )
+                    .cardBackground()
+                    
                     FixedExpensesCard(
                         fixedExpenses: viewModel.fixedExpensesList,
                         categories: viewModel.categories
@@ -52,11 +59,6 @@ struct ExpensesView: View {
                         )
                         .cardBackground()
                     }
-                    
-                    ExpenseCategoryBreakdownCard(
-                        categories: viewModel.categories,
-                        categoryExpenses: viewModel.categoryExpenses
-                    )
                     
                     RecentTransactionsCard(
                         expenses: viewModel.recentExpensesList,
