@@ -8,50 +8,15 @@ struct AddExpenseView: View {
     var body: some View {
         NavigationView {
             Form {
-                Section("Expense Details") {
-                    TextField("Title", text: $viewModel.title)
-                    
-                    TextField("Amount", value: $viewModel.amount, format: .currency(code: "USD"))
-                        .keyboardType(.decimalPad)
-                    
-                    TextField("Vendor (Optional)", text: $viewModel.vendor)
-                    
-                    DatePicker("Date", selection: $viewModel.date, displayedComponents: [.date])
+                ExpenseDetailsSection(viewModel: viewModel)
+                CategorySection(viewModel: viewModel)
+                SplitToggleSection(viewModel: viewModel)
+                
+                if viewModel.isSplitExpense {
+                    SplitWithSection(viewModel: viewModel, userID: userID)
                 }
                 
-                Section("Category") {
-                    if viewModel.isLoadingCategories {
-                        ProgressView()
-                    } else if viewModel.categories.isEmpty {
-                        Text("No categories available")
-                            .foregroundColor(.secondary)
-                    } else {
-                        Picker("Category", selection: $viewModel.selectedCategoryID) {
-                            ForEach(viewModel.categories) { category in
-                                HStack {
-                                    Text(category.categoryName)
-                                    if category.fixedExpense {
-                                        Image(systemName: "pin.fill")
-                                    }
-                                }
-                                .tag(category.id as UUID?)
-                            }
-                        }
-                    }
-                }
-                
-                Section {
-                    Button(action: saveExpense) {
-                        if viewModel.isSaving {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle())
-                        } else {
-                            Text("Save Expense")
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                    .disabled(viewModel.isSaving || !viewModel.isValid)
-                }
+                SaveButtonSection(viewModel: viewModel, saveAction: saveExpense)
             }
             .navigationTitle("Add Expense")
             .navigationBarTitleDisplayMode(.inline)
@@ -70,6 +35,7 @@ struct AddExpenseView: View {
             }
             .task {
                 await viewModel.loadCategories()
+                await viewModel.loadFriends(forUserID: userID)
             }
             .interactiveDismissDisabled(viewModel.isSaving)
         }
@@ -84,61 +50,184 @@ struct AddExpenseView: View {
     }
 }
 
-@MainActor
-class AddExpenseViewModel: ObservableObject {
-    @Published var title = ""
-    @Published var amount = 0.0
-    @Published var vendor = ""
-    @Published var date = Date()
-    @Published var selectedCategoryID: UUID?
-    @Published var categories: [Category] = []
-    @Published var isLoadingCategories = false
-    @Published var isSaving = false
-    @Published var showError = false
-    @Published var errorMessage = ""
+// MARK: - Subviews
+
+private struct ExpenseDetailsSection: View {
+    @ObservedObject var viewModel: AddExpenseViewModel
     
-    private let categoryService = CategoryService.shared
-    private let expenseService = ExpenseService.shared
-    
-    var isValid: Bool {
-        !title.isEmpty && amount > 0 && selectedCategoryID != nil
-    }
-    
-    func loadCategories() async {
-        isLoadingCategories = true
-        do {
-            categories = try await categoryService.getAllCategories()
-            if let firstCategory = categories.first {
-                selectedCategoryID = firstCategory.id
-            }
-        } catch {
-            errorMessage = error.localizedDescription
-            showError = true
-        }
-        isLoadingCategories = false
-    }
-    
-    func saveExpense(userID: UUID) async -> Bool {
-        guard isValid, let categoryID = selectedCategoryID else { return false }
-        
-        isSaving = true
-        do {
-            let expense = Expense(
-                userID: userID,
-                categoryID: categoryID,
-                title: title,
-                amount: amount,
-                transactionDate: date,
-                vendor: vendor.isEmpty ? nil : vendor
-            )
+    var body: some View {
+        Section("Expense Details") {
+            TextField("Expense Title", text: $viewModel.title)
             
-            _ = try await expenseService.createExpense(expense)
-            return true
-        } catch {
-            errorMessage = error.localizedDescription
-            showError = true
-            isSaving = false
-            return false
+            TextField("Amount", value: $viewModel.amount, format: .currency(code: "USD"))
+                .keyboardType(.decimalPad)
+            
+            TextField("Vendor (Optional)", text: $viewModel.vendor)
+            
+            DatePicker("Date", selection: $viewModel.date, displayedComponents: [.date])
         }
     }
-} 
+}
+
+private struct CategorySection: View {
+    @ObservedObject var viewModel: AddExpenseViewModel
+    
+    var body: some View {
+        Section("Category") {
+            if viewModel.isLoadingCategories {
+                ProgressView()
+            } else if viewModel.categories.isEmpty {
+                Text("No categories available")
+                    .foregroundColor(.secondary)
+            } else {
+                Picker("Category", selection: $viewModel.selectedCategoryID) {
+                    ForEach(viewModel.categories) { category in
+                        HStack {
+                            Text(category.categoryName)
+                            if category.fixedExpense {
+                                Image(systemName: "pin.fill")
+                            }
+                        }
+                        .tag(category.id as UUID?)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct SplitToggleSection: View {
+    @ObservedObject var viewModel: AddExpenseViewModel
+    
+    var body: some View {
+        Section {
+            Toggle("Split with Friends", isOn: $viewModel.isSplitExpense)
+        }
+    }
+}
+
+private struct SplitWithSection: View {
+    @ObservedObject var viewModel: AddExpenseViewModel
+    let userID: UUID
+    
+    var body: some View {
+        Section("Split with") {
+            if viewModel.isLoadingUsers {
+                ProgressView()
+            } else if viewModel.users.isEmpty {
+                Text("No users available")
+                    .foregroundColor(.secondary)
+            } else {
+                UserSelectionList(viewModel: viewModel, userID: userID)
+                if !viewModel.selectedParticipants.isEmpty {
+                    SplitSummary(viewModel: viewModel)
+                }
+            }
+        }
+    }
+}
+
+private struct UserSelectionList: View {
+    @ObservedObject var viewModel: AddExpenseViewModel
+    let userID: UUID
+    
+    var body: some View {
+        VStack {
+            SearchBarFriendsList(text: $viewModel.searchQuery)
+                .onChange(of: viewModel.searchQuery) { _ in
+                    viewModel.filterUsers()
+                }
+                .padding(.horizontal)
+            
+            if viewModel.filteredUsers.isEmpty {
+                Text(viewModel.searchQuery.isEmpty ? "No friends available" : "No friends found")
+                    .foregroundColor(.secondary)
+                    .padding()
+            } else {
+                ForEach(viewModel.filteredUsers) { user in
+                    Button(action: { viewModel.toggleParticipant(user.id) }) {
+                        HStack {
+                            VStack(alignment: .leading) {
+                                Text(user.username)
+                                    .font(.headline)
+                                if let fullName = user.fullName {
+                                    Text(fullName)
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            
+                            Spacer()
+                            
+                            if viewModel.selectedParticipants.contains(user.id) {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct SearchBarFriendsList: View {
+    @Binding var text: String
+    
+    var body: some View {
+        HStack {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(.gray)
+            
+            TextField("Search friends", text: $text)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+            
+            if !text.isEmpty {
+                Button(action: { text = "" }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.gray)
+                }
+            }
+        }
+    }
+}
+
+private struct SplitSummary: View {
+    @ObservedObject var viewModel: AddExpenseViewModel
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Split Summary")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            
+            let totalParticipants = viewModel.selectedParticipants.count + 1
+            let amountPerPerson = viewModel.amount / Double(totalParticipants)
+            
+            Text("Amount per person: \(amountPerPerson, format: .currency(code: "USD"))")
+                .font(.subheadline)
+        }
+        .padding(.top, 8)
+    }
+}
+
+private struct SaveButtonSection: View {
+    @ObservedObject var viewModel: AddExpenseViewModel
+    let saveAction: () -> Void
+    
+    var body: some View {
+        Section {
+            Button(action: saveAction) {
+                if viewModel.isSaving {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle())
+                } else {
+                    Text("Save Expense")
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .disabled(viewModel.isSaving || !viewModel.isValid)
+        }
+    }
+}

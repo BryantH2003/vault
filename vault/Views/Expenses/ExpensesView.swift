@@ -1,8 +1,25 @@
 import SwiftUI
 
+private enum ExpensesTab {
+    case overview
+    case outstandingPayments
+    case myExpenses
+    case mySavings
+    
+    var title: String {
+        switch self {
+        case .overview: return "Overview"
+        case .outstandingPayments: return "Outstanding"
+        case .myExpenses: return "My Expenses"
+        case .mySavings: return "My Savings"
+        }
+    }
+}
+
 struct ExpensesView: View {
     @StateObject private var viewModel = ExpensesViewModel()
     @State private var showingMonthPicker = false
+    @State private var selectedTab: ExpensesTab = .overview
     let userID: UUID
     
     var body: some View {
@@ -20,56 +37,39 @@ struct ExpensesView: View {
                     .padding(.vertical, 8)
                 }
                 
+                HStack(alignment: .center ,spacing: 24) {
+                    ForEach([ExpensesTab.overview, .outstandingPayments, .myExpenses, .mySavings], id: \.title) { tab in
+                        Button(action: { selectedTab = tab }) {
+                            VStack(spacing: 8) {
+                                Text(tab.title)
+                                    .foregroundColor(selectedTab == tab ? .primary : .secondary)
+                                        .fontWeight(selectedTab == tab ? .semibold : .regular)
+                                    
+                                Rectangle()
+                                    .fill(selectedTab == tab ? Color.primary : Color.clear)
+                                    .frame(height: 2)
+                            }
+                        }
+                    }
+                }
+                    .padding(.horizontal)
+                    .frame(maxWidth: .infinity)
+                
                 if viewModel.isLoading {
                     ProgressView()
                         .padding()
                 } else if let error = viewModel.error {
                     ErrorView(error: error)
                 } else {
-                    MonthlyExpenseSummaryCard(
-                        totalExpenses: viewModel.monthlyExpensesTotal,
-                        fixedExpenses: viewModel.monthlyFixedExpensesTotal,
-                        variableExpenses: viewModel.monthlyVariableExpensesTotal,
-                        previousTotalExpenses: viewModel.previousMonthExpensesTotal,
-                        previousTotalFixedExpenses: viewModel.previousMonthFixedExpensesTotal,
-                        previousTotalVariableExpenses: viewModel.previousMonthVariableExpensesTotal
-                    )
-                    .cardBackground()
-                    
-                    ExpenseCategoryBreakdownCard(
-                        categories: viewModel.categories,
-                        categoryExpenses: viewModel.categoryExpenses,
-                        previousMonthCategoryExpenses: viewModel.previousMonthCategoryExpenses
-                    )
-                    .cardBackground()
-                    
-                    FixedExpensesCard(
-                        fixedExpenses: viewModel.fixedExpensesList,
-                        categories: viewModel.categories
-                    )
-                    .cardBackground()
-                    
-                    if !viewModel.outstandingPaymentsList.isEmpty || !viewModel.splitExpensesList.isEmpty {
-                        OutstandingPaymentsCard(
-                            outstandingPayments: viewModel.outstandingPaymentsList,
-                            splitExpenses: viewModel.splitExpensesList,
-                            splitParticipants: viewModel.splitParticipants,
-                            users: viewModel.users,
-                            categories: viewModel.categories
-                        )
-                        .cardBackground()
-                    }
-                    
-                    RecentTransactionsCard(
-                        expenses: viewModel.recentExpensesList,
-                        categories: viewModel.categories
-                    )
-                    
-                    ForEach(viewModel.savingsGoalsList) { goal in
-                        SavingsGoalCard(
-                            goal: goal,
-                            progress: goal.currentAmount / goal.targetAmount
-                        )
+                    switch selectedTab {
+                    case .overview:
+                        OverviewTabView(viewModel: viewModel)
+                    case .outstandingPayments:
+                        OutstandingPaymentsTabView(viewModel: viewModel, userID: userID)
+                    case .myExpenses:
+                        MyExpensesTabView(viewModel: viewModel)
+                    case .mySavings:
+                        MySavingsTabView(viewModel: viewModel)
                     }
                 }
             }
@@ -88,7 +88,6 @@ struct ExpensesView: View {
             }
         }
         .sheet(isPresented: $viewModel.showingAddExpense, onDismiss: {
-            // Refresh data when sheet is dismissed
             Task {
                 await viewModel.loadExpensesData(forUserID: userID)
             }
@@ -106,6 +105,97 @@ struct ExpensesView: View {
     }
 }
 
+// Tab Views
+private struct OverviewTabView: View {
+    let viewModel: ExpensesViewModel
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            MonthlyExpenseSummaryCard(
+                totalExpenses: viewModel.monthlyExpensesTotal,
+                fixedExpenses: viewModel.monthlyFixedExpensesTotal,
+                variableExpenses: viewModel.monthlyVariableExpensesTotal,
+                previousTotalExpenses: viewModel.previousMonthExpensesTotal,
+                previousTotalFixedExpenses: viewModel.previousMonthFixedExpensesTotal,
+                previousTotalVariableExpenses: viewModel.previousMonthVariableExpensesTotal
+            )
+            .cardBackground()
+            
+            ExpenseCategoryBreakdownCard(
+                categories: viewModel.categories,
+                categoryExpenses: viewModel.categoryExpenses,
+                previousMonthCategoryExpenses: viewModel.previousMonthCategoryExpenses
+            )
+            .cardBackground()
+        }
+    }
+}
+
+private struct OutstandingPaymentsTabView: View {
+    let viewModel: ExpensesViewModel
+    let userID: UUID
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            if !viewModel.outstandingPaymentsList.isEmpty {
+                OutstandingPaymentsCard(
+                    outstandingPayments: viewModel.outstandingPaymentsList,
+                    users: viewModel.users,
+                    categories: viewModel.categories
+                )
+                .cardBackground()
+            }
+            
+            if !viewModel.splitExpensesYouOweList.isEmpty || !viewModel.splitExpensesOwedToYouList.isEmpty {
+                SplitExpensesOverviewCard(
+                    expensesYouOwe: viewModel.splitExpensesYouOweList,
+                    expensesOwedToYou: viewModel.splitExpensesOwedToYouList,
+                    participants: viewModel.splitParticipants,
+                    users: viewModel.users,
+                    currentUserID: userID
+                )
+                .cardBackground()
+            }
+        }
+    }
+}
+
+private struct MyExpensesTabView: View {
+    let viewModel: ExpensesViewModel
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            FixedExpensesCard(
+                fixedExpenses: viewModel.fixedExpensesList,
+                categories: viewModel.categories
+            )
+            .cardBackground()
+            
+            RecentTransactionsCard(
+                expenses: viewModel.recentExpensesList,
+                categories: viewModel.categories
+            )
+            .cardBackground()
+        }
+    }
+}
+
+private struct MySavingsTabView: View {
+    let viewModel: ExpensesViewModel
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            ForEach(viewModel.savingsGoalsList) { goal in
+                SavingsGoalCard(
+                    goal: goal,
+                    progress: goal.currentAmount / goal.targetAmount
+                )
+                .cardBackground()
+            }
+        }
+    }
+}
+
 private struct ErrorView: View {
     let error: Error
     
@@ -114,16 +204,16 @@ private struct ErrorView: View {
             Image(systemName: "exclamationmark.triangle")
                 .font(.largeTitle)
                 .foregroundColor(.red)
-            Text("Error loading expenses")
-                .font(.headline)
+            Text("Error loading data")
+                .figtreeFont(.semibold, size: 16)
             Text(error.localizedDescription)
-                .font(.caption)
+                .figtreeFont(.regular, size: 14)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
         }
         .padding()
         .frame(maxWidth: .infinity)
-        .background(Color(.systemBackground))
+        .background(Color.white)
         .cornerRadius(12)
         .shadow(radius: 2)
     }

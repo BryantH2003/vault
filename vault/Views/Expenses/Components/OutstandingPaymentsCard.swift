@@ -2,8 +2,6 @@ import SwiftUI
 
 struct OutstandingPaymentsCard: View {
     let outstandingPayments: [OutstandingPayment]
-    let splitExpenses: [SplitExpense]
-    let splitParticipants: [UUID: [SplitExpenseParticipant]]
     let users: [UUID: User]
     let categories: [UUID: Category]
     
@@ -12,7 +10,7 @@ struct OutstandingPaymentsCard: View {
             Text("Outstanding Payments")
                 .cardTitleStyle()
             
-            if outstandingPayments.isEmpty && splitExpenses.isEmpty {
+            if outstandingPayments.isEmpty {
                 Text("No outstanding payments")
                     .figtreeFont(.regular, size: 14)
                     .foregroundColor(.secondary)
@@ -38,31 +36,6 @@ struct OutstandingPaymentsCard: View {
                     }
                 }
                 
-                // Split Expenses Section
-                if !splitExpenses.isEmpty {
-                    if !outstandingPayments.isEmpty {
-                        Divider()
-                            .padding(.vertical, 8)
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Split Expenses")
-                            .figtreeFont(.medium, size: 16)
-                            .foregroundColor(.primary)
-                        
-                        ForEach(splitExpenses) { expense in
-                            SplitExpenseRow(
-                                expense: expense,
-                                participants: splitParticipants[expense.id] ?? [],
-                                users: users
-                            )
-                            
-                            if expense.id != splitExpenses.last?.id {
-                                Divider()
-                            }
-                        }
-                    }
-                }
             }
         }
         .padding()
