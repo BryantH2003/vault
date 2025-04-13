@@ -8,11 +8,15 @@ struct AddExpenseView: View {
     var body: some View {
         NavigationView {
             Form {
+                ExpenseTypeSection(viewModel: viewModel)
                 ExpenseDetailsSection(viewModel: viewModel)
                 CategorySection(viewModel: viewModel)
-                SplitToggleSection(viewModel: viewModel)
                 
-                if viewModel.isSplitExpense {
+                if viewModel.expenseType == .fixed {
+                    RecurrenceSection(viewModel: viewModel)
+                }
+                
+                if viewModel.expenseType == .shared {
                     SplitWithSection(viewModel: viewModel, userID: userID)
                 }
                 
@@ -35,7 +39,17 @@ struct AddExpenseView: View {
             }
             .task {
                 await viewModel.loadCategories()
-                await viewModel.loadFriends(forUserID: userID)
+                if viewModel.expenseType == .shared {
+                    await viewModel.loadFriends(forUserID: userID)
+                }
+            }
+            .onChange(of: viewModel.expenseType) { newType in
+                Task {
+                    await viewModel.loadCategories()
+                    if newType == .shared {
+                        await viewModel.loadFriends(forUserID: userID)
+                    }
+                }
             }
             .interactiveDismissDisabled(viewModel.isSaving)
         }
@@ -52,6 +66,21 @@ struct AddExpenseView: View {
 
 // MARK: - Subviews
 
+private struct ExpenseTypeSection: View {
+    @ObservedObject var viewModel: AddExpenseViewModel
+    
+    var body: some View {
+        Section {
+            Picker("Expense Type", selection: $viewModel.expenseType) {
+                Text("Regular Expense").tag(ExpenseType.regular)
+                Text("Fixed Expense").tag(ExpenseType.fixed)
+                Text("Shared Expense").tag(ExpenseType.shared)
+            }
+            .pickerStyle(.segmented)
+        }
+    }
+}
+
 private struct ExpenseDetailsSection: View {
     @ObservedObject var viewModel: AddExpenseViewModel
     
@@ -64,7 +93,32 @@ private struct ExpenseDetailsSection: View {
             
             TextField("Vendor (Optional)", text: $viewModel.vendor)
             
-            DatePicker("Date", selection: $viewModel.date, displayedComponents: [.date])
+            if viewModel.expenseType == .fixed {
+                DatePicker("Due Date", selection: $viewModel.date, displayedComponents: [.date])
+            } else {
+                DatePicker("Date", selection: $viewModel.date, displayedComponents: [.date])
+            }
+        }
+    }
+}
+
+private struct RecurrenceSection: View {
+    @ObservedObject var viewModel: AddExpenseViewModel
+    
+    var body: some View {
+        Section("Recurrence") {
+            Toggle("Recurring?", isOn: $viewModel.isRecurring)
+            
+            if viewModel.isRecurring {
+                Stepper("Every \(viewModel.recurrenceInterval) \(viewModel.recurrenceUnit.rawValue)\(viewModel.recurrenceInterval > 1 ? "s" : "")",
+                        value: $viewModel.recurrenceInterval, in: 1...365)
+                
+                Picker("Recurrence Unit", selection: $viewModel.recurrenceUnit) {
+                    ForEach(AddExpenseViewModel.RecurrenceUnit.allCases, id: \.self) { unit in
+                        Text(unit.rawValue + "s").tag(unit)
+                    }
+                }
+            }
         }
     }
 }
@@ -76,12 +130,12 @@ private struct CategorySection: View {
         Section("Category") {
             if viewModel.isLoadingCategories {
                 ProgressView()
-            } else if viewModel.categories.isEmpty {
+            } else if viewModel.filteredCategories.isEmpty {
                 Text("No categories available")
                     .foregroundColor(.secondary)
             } else {
                 Picker("Category", selection: $viewModel.selectedCategoryID) {
-                    ForEach(viewModel.categories) { category in
+                    ForEach(viewModel.filteredCategories) { category in
                         HStack {
                             Text(category.categoryName)
                             if category.fixedExpense {
@@ -150,11 +204,9 @@ private struct UserSelectionList: View {
                             VStack(alignment: .leading) {
                                 Text(user.username)
                                     .font(.headline)
-                                if let fullName = user.fullName {
-                                    Text(fullName)
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
-                                }
+                                Text(user.fullName)
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
                             }
                             
                             Spacer()

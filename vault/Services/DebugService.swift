@@ -98,7 +98,7 @@ class DebugService {
     
     private func createDummyCategories() async throws -> [Category] {
         let categories = [
-            Category(id: UUID(), categoryName: "Rent", fixedExpense: false),
+            Category(id: UUID(), categoryName: "Rent", fixedExpense: true),
             Category(id: UUID(), categoryName: "Electricity", fixedExpense: true),
             Category(id: UUID(), categoryName: "Internet", fixedExpense: true),
             Category(id: UUID(), categoryName: "Phone Bill", fixedExpense: true),
@@ -148,10 +148,30 @@ class DebugService {
     
     private func createDummyFixedExpenses(forUserID userId: UUID, categories: [Category]) async throws {
         let fixedExpenses = [
-            FixedExpense(id: UUID(), userID: userId, categoryID: categories[0].id, title: "Monthly Rent", amount: 1500.00, dueDate: Date().addingTimeInterval(86400 * 30), isRecurring: true, recurringFrequency: "Monthly"),
-            FixedExpense(id: UUID(), userID: userId, categoryID: categories[2].id, title: "Internet Bill", amount: 89.99, dueDate: Date().addingTimeInterval(86400 * 30), isRecurring: true, recurringFrequency: "Monthly"),
-            FixedExpense(id: UUID(), userID: userId, categoryID: categories[4].id, title: "Car Insurance", amount: 450.00, dueDate: Date().addingTimeInterval(86400 * 90), isRecurring: true, recurringFrequency: "Quarterly"),
-            FixedExpense(id: UUID(), userID: userId, categoryID: categories[0].id, title: "Monthly Rent", amount: 1530.00, dueDate: Date().addingTimeInterval(-86400 * 30), isRecurring: true, recurringFrequency: "Monthly")
+            FixedExpense(
+                id: UUID(),
+                userID: userId,
+                categoryID: categories[0].id,
+                title: "Monthly Rent",
+                amount: 1500.00,
+                dueDate: Date().addingTimeInterval(86400),
+                isRecurring: true,
+                recurrenceInterval: 1,
+                recurringUnit: "Months"),
+            FixedExpense(
+                id: UUID(),
+                userID: userId,
+                categoryID: categories[2].id,
+                title: "Internet Bill",
+                amount: 89.99,
+                dueDate: Date().addingTimeInterval(86400),
+                isRecurring: true,
+                recurrenceInterval: 1,
+                recurringUnit: "Months"),
+            FixedExpense(id: UUID(), userID: userId, categoryID: categories[4].id, title: "Car Insurance", amount: 450.00, dueDate: Date().addingTimeInterval(86400), isRecurring: true, recurrenceInterval: 3,
+                         recurringUnit: "Months"),
+            FixedExpense(id: UUID(), userID: userId, categoryID: categories[0].id, title: "Monthly Rent", amount: 1530.00, dueDate: Date().addingTimeInterval(-86400 * 20), isRecurring: true, recurrenceInterval: 1,
+                         recurringUnit: "Months")
         ]
         
         for fixedExpense in fixedExpenses {
@@ -321,7 +341,6 @@ class DebugService {
             User(
                 username: "john.doe",
                 email: "john.doe@example.com",
-                passwordHash: "dummy_hash",
                 fullName: "John Doe",
                 employmentStatus: "Employed",
                 netPaycheckIncome: 5000,
@@ -329,14 +348,12 @@ class DebugService {
                 monthlyIncome: 6000,
                 monthlySavingsGoal: 1500,
                 monthlySpendingLimit: 3000,
-                friends: [],
                 createdAt: Date(),
                 updatedAt: Date()
             ),
             User(
                 username: "jane.smith",
                 email: "jane.smith@example.com",
-                passwordHash: "dummy_hash",
                 fullName: "Jane Smith",
                 employmentStatus: "Self-Employed",
                 netPaycheckIncome: 6000,
@@ -344,14 +361,12 @@ class DebugService {
                 monthlyIncome: 7000,
                 monthlySavingsGoal: 2000,
                 monthlySpendingLimit: 3500,
-                friends: [],
                 createdAt: Date(),
                 updatedAt: Date()
             ),
             User(
                 username: "mike.wilson",
                 email: "mike.wilson@example.com",
-                passwordHash: "dummy_hash",
                 fullName: "Mike Wilson",
                 employmentStatus: "Employed",
                 netPaycheckIncome: 4500,
@@ -359,14 +374,12 @@ class DebugService {
                 monthlyIncome: 5500,
                 monthlySavingsGoal: 1200,
                 monthlySpendingLimit: 2800,
-                friends: [],
                 createdAt: Date(),
                 updatedAt: Date()
             ),
             User(
                 username: "sarah.johnson",
                 email: "sarah.johnson@example.com",
-                passwordHash: "dummy_hash",
                 fullName: "Sarah Johnson",
                 employmentStatus: "Freelancer",
                 netPaycheckIncome: 5500,
@@ -374,7 +387,6 @@ class DebugService {
                 monthlyIncome: 6500,
                 monthlySavingsGoal: 1800,
                 monthlySpendingLimit: 3200,
-                friends: [],
                 createdAt: Date(),
                 updatedAt: Date()
             )

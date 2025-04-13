@@ -75,7 +75,7 @@ private struct FixedExpenseRow: View {
                 Text(expense.amount, format: .currency(code: "USD"))
                     .cardRowAmountStyle()
                 
-                Text(expense.recurringFrequency)
+                Text("Every \(expense.recurrenceInterval) \(expense.recurringUnit)")
                     .figtreeFont(.regular, size: 14)
                     .foregroundColor(.blue)
             }

@@ -118,8 +118,7 @@ class AuthViewModel: ObservableObject {
                 id: existingUser.id,
                 username: existingUser.username,
                 email: firebaseUser.email ?? "",
-                passwordHash: existingUser.passwordHash,
-                fullName: firebaseUser.displayName ?? existingUser.fullName ?? "",
+                fullName: existingUser.fullName ?? "",
                 registrationDate: existingUser.registrationDate,
                 employmentStatus: existingUser.employmentStatus,
                 netPaycheckIncome: existingUser.netPaycheckIncome,
@@ -127,7 +126,6 @@ class AuthViewModel: ObservableObject {
                 monthlyIncome: existingUser.monthlyIncome,
                 monthlySavingsGoal: existingUser.monthlySavingsGoal,
                 monthlySpendingLimit: existingUser.monthlySpendingLimit,
-                friends: existingUser.friends,
                 createdAt: existingUser.createdAt,
                 updatedAt: Date()
             )
@@ -138,8 +136,7 @@ class AuthViewModel: ObservableObject {
                 id: userId,
                 username: firebaseUser.email?.components(separatedBy: "@").first ?? "",
                 email: firebaseUser.email ?? "",
-                passwordHash: "", // We don't store password hash for Google Sign-In
-                fullName: firebaseUser.displayName,
+                fullName: firebaseUser.displayName ?? "",
                 registrationDate: Date(),
                 employmentStatus: "Not Set",
                 netPaycheckIncome: 0,
@@ -147,7 +144,6 @@ class AuthViewModel: ObservableObject {
                 monthlyIncome: 0,
                 monthlySavingsGoal: 0,
                 monthlySpendingLimit: 0,
-                friends: [],
                 createdAt: Date(),
                 updatedAt: Date()
             )

@@ -6,8 +6,15 @@
 //
 import SwiftUI
 
+enum ExpenseType {
+    case regular
+    case fixed
+    case shared
+}
+
 @MainActor
 class AddExpenseViewModel: ObservableObject {
+    @Published var expenseType: ExpenseType = .regular
     @Published var title = ""
     @Published var amount = 0.0
     @Published var vendor = ""
@@ -18,6 +25,11 @@ class AddExpenseViewModel: ObservableObject {
     @Published var isSaving = false
     @Published var showError = false
     @Published var errorMessage = ""
+    
+    // Fixed expense properties
+    @Published var recurrenceInterval: Int = 1
+    @Published var recurrenceUnit: RecurrenceUnit = .month
+    @Published var isRecurring: Bool = true
     
     // Split payment properties
     @Published var isSplitExpense = false
@@ -33,17 +45,42 @@ class AddExpenseViewModel: ObservableObject {
     private let splitExpenseParticipantService = SplitExpenseParticipantService.shared
     private let userService = UserService.shared
     private let friendsService = FriendsService.shared
+    private let fixedExpenseService = FixedExpenseService.shared
+    
+    enum RecurrenceUnit: String, CaseIterable {
+        case day = "Day"
+        case week = "Week"
+        case month = "Month"
+        case year = "Year"
+    }
+    
+    var filteredCategories: [Category] {
+        switch expenseType {
+        case .regular:
+            return categories.filter { !$0.fixedExpense }
+        case .fixed:
+            return categories.filter { $0.fixedExpense }
+        case .shared:
+            return categories
+        }
+    }
     
     var isValid: Bool {
-        !title.isEmpty && amount > 0 && selectedCategoryID != nil &&
-        (!isSplitExpense || (isSplitExpense && !selectedParticipants.isEmpty))
+        let baseValid = !title.isEmpty && amount > 0 && selectedCategoryID != nil
+        
+        switch expenseType {
+        case .regular, .fixed:
+            return baseValid
+        case .shared:
+            return baseValid && !selectedParticipants.isEmpty
+        }
     }
     
     func loadCategories() async {
         isLoadingCategories = true
         do {
             categories = try await categoryService.getAllCategories()
-            if let firstCategory = categories.first {
+            if let firstCategory = filteredCategories.first {
                 selectedCategoryID = firstCategory.id
             }
         } catch {
@@ -90,7 +127,7 @@ class AddExpenseViewModel: ObservableObject {
         } else {
             filteredUsers = users.filter { user in
                 user.username.localizedCaseInsensitiveContains(searchQuery) ||
-                (user.fullName?.localizedCaseInsensitiveContains(searchQuery) ?? false)
+                (user.fullName.localizedCaseInsensitiveContains(searchQuery) ?? false)
             }
         }
     }
@@ -100,34 +137,60 @@ class AddExpenseViewModel: ObservableObject {
         
         isSaving = true
         do {
-            let expense = Expense(
-                userID: userID,
-                categoryID: categoryID,
-                title: title,
-                amount: amount,
-                transactionDate: date,
-                vendor: vendor.isEmpty ? nil : vendor
-            )
-            
-            let savedExpense = try await expenseService.createExpense(expense)
-            
-            if isSplitExpense && !selectedParticipants.isEmpty {
-                // Create split expense
-                let splitExpense = SplitExpense(
-                    expenseDescription: title,
-                    totalAmount: amount,
-                    payerID: userID,
-                    creatorID: userID
+            switch expenseType {
+            case .regular:
+                let expense = Expense(
+                    userID: userID,
+                    categoryID: categoryID,
+                    title: title,
+                    amount: amount,
+                    transactionDate: date,
+                    vendor: vendor.isEmpty ? nil : vendor
+                )
+                _ = try await expenseService.createExpense(expense)
+                
+            case .fixed:
+                let fixedExpense = FixedExpense(
+                    userID: userID,
+                    categoryID: categoryID,
+                    title: title,
+                    amount: amount,
+                    dueDate: date,
+                    transactionDate: Date(),
+                    isRecurring: isRecurring,
+                    recurrenceInterval: recurrenceInterval,
+                    recurringUnit: recurrenceUnit.rawValue.lowercased()
+                )
+                _ = try await fixedExpenseService.createFixedExpense(fixedExpense)
+                
+            case .shared:
+                // Calculate amount per person (including the creator)
+                let totalParticipants = selectedParticipants.count + 1
+                let amountPerPerson = amount / Double(totalParticipants)
+                
+                let expense = Expense(
+                    userID: userID,
+                    categoryID: categoryID,
+                    title: title,
+                    amount: amountPerPerson,
+                    transactionDate: date,
+                    vendor: vendor.isEmpty ? nil : vendor
                 )
                 
-                let savedSplitExpense = try await splitExpenseService.createSplitExpense(splitExpense)
-                
-                // Calculate amount per person (including the creator)
-                let totalParticipants = selectedParticipants.count + 1 // +1 for the creator
-                let amountPerPerson = amount / Double(totalParticipants)
+                let savedExpense = try await expenseService.createExpense(expense)
                 
                 // Create participants (including the creator)
                 for participantID in selectedParticipants {
+                    // Create split expense
+                    let splitExpense = SplitExpense(
+                        expenseDescription: title,
+                        totalAmount: amount,
+                        payerID: participantID,
+                        creatorID: userID
+                    )
+                    
+                    let savedSplitExpense = try await splitExpenseService.createSplitExpense(splitExpense)
+                    
                     let participant = SplitExpenseParticipant(
                         splitID: savedSplitExpense.id,
                         userID: participantID,
@@ -136,15 +199,6 @@ class AddExpenseViewModel: ObservableObject {
                     )
                     try await splitExpenseParticipantService.createParticipant(participant)
                 }
-                
-                // Add creator as a participant
-                let creatorParticipant = SplitExpenseParticipant(
-                    splitID: savedSplitExpense.id,
-                    userID: userID,
-                    amountDue: amountPerPerson,
-                    status: SplitExpenseParticipant.PaymentStatus.paid.rawValue // Creator's portion is considered paid
-                )
-                try await splitExpenseParticipantService.createParticipant(creatorParticipant)
             }
             
             return true
