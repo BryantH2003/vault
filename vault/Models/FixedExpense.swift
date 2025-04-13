@@ -11,7 +11,8 @@ struct FixedExpense: Identifiable, Codable {
     var dueDate: Date
     var transactionDate: Date
     var isRecurring: Bool
-    var recurringFrequency: String
+    var recurrenceInterval: Int
+    var recurringUnit: String
     
     init(
         id: UUID = UUID(),
@@ -22,7 +23,8 @@ struct FixedExpense: Identifiable, Codable {
         dueDate: Date,
         transactionDate: Date = Date(),
         isRecurring: Bool = true,
-        recurringFrequency: String = "Monthly"
+        recurrenceInterval: Int,
+        recurringUnit: String = "months"
     ) {
         self.id = id
         self.userID = userID
@@ -32,7 +34,15 @@ struct FixedExpense: Identifiable, Codable {
         self.dueDate = dueDate
         self.transactionDate = transactionDate
         self.isRecurring = isRecurring
-        self.recurringFrequency = recurringFrequency
+        self.recurrenceInterval = recurrenceInterval
+        self.recurringUnit = recurringUnit
+    }
+    
+    enum RecurrenceUnit: String {
+        case months = "Months"
+        case days = "Days"
+        case weeks = "Weeks"
+        case years = "Years"
     }
     
     enum CodingKeys: String, CodingKey {
@@ -44,7 +54,8 @@ struct FixedExpense: Identifiable, Codable {
         case dueDate
         case transactionDate
         case isRecurring
-        case recurringFrequency
+        case recurrenceInterval
+        case recurringUnit
     }
     
     init(from decoder: Decoder) throws {
@@ -74,7 +85,8 @@ struct FixedExpense: Identifiable, Codable {
         self.dueDate = try container.decode(Date.self, forKey: .dueDate)
         self.transactionDate = try container.decode(Date.self, forKey: .transactionDate)
         self.isRecurring = try container.decode(Bool.self, forKey: .isRecurring)
-        self.recurringFrequency = try container.decode(String.self, forKey: .recurringFrequency)
+        self.recurrenceInterval = try container.decode(Int.self, forKey: .recurrenceInterval)
+        self.recurringUnit = try container.decode(String.self, forKey: .recurringUnit)
     }
     
     func encode(to encoder: Encoder) throws {
@@ -89,6 +101,7 @@ struct FixedExpense: Identifiable, Codable {
         try container.encode(dueDate, forKey: .dueDate)
         try container.encode(transactionDate, forKey: .transactionDate)
         try container.encode(isRecurring, forKey: .isRecurring)
-        try container.encode(recurringFrequency, forKey: .recurringFrequency)
+        try container.encode(recurrenceInterval, forKey: .recurrenceInterval)
+        try container.encode(recurringUnit, forKey: .recurringUnit)
     }
 } 

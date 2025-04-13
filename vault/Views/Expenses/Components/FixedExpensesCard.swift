@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct FixedExpensesCard: View {
-    let fixedExpenses: [Expense]
+    let fixedExpenses: [FixedExpense]
     let categories: [UUID: Category]
     
     private var totalFixedExpenses: Double {
@@ -12,8 +12,7 @@ struct FixedExpensesCard: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Text("Fixed Expenses")
-                    .font(.headline)
-                    .foregroundColor(.primary)
+                    .cardTitleStyle()
                 
                 Spacer()
                 
@@ -24,8 +23,7 @@ struct FixedExpensesCard: View {
             
             if fixedExpenses.isEmpty {
                 Text("No fixed expenses")
-                    .foregroundColor(.secondary)
-                    .padding(.vertical, 8)
+                    .secondaryTitleStyle()
             } else {
                 VStack(spacing: 12) {
                     ForEach(fixedExpenses) { expense in
@@ -50,32 +48,24 @@ struct FixedExpensesCard: View {
 }
 
 private struct FixedExpenseRow: View {
-    let expense: Expense
+    let expense: FixedExpense
     let category: Category?
     
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text(expense.title)
-                    .fontWeight(.medium)
+                    .cardRowTitleStyle()
+                
+                Text(expense.dueDate, style: .date)
+                    .secondaryTitleStyle()
                 
                 HStack {
                     if let category = category {
                         Text(category.categoryName)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                            .secondaryTitleStyle()
                     }
                     
-                    if let vendor = expense.vendor, !vendor.isEmpty {
-                        if category != nil {
-                            Text("•")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        Text(vendor)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
                 }
             }
             
@@ -83,11 +73,10 @@ private struct FixedExpenseRow: View {
             
             VStack(alignment: .trailing, spacing: 4) {
                 Text(expense.amount, format: .currency(code: "USD"))
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                    .cardRowAmountStyle()
                 
-                Text("Monthly")
-                    .font(.caption)
+                Text("Every \(expense.recurrenceInterval) \(expense.recurringUnit)")
+                    .figtreeFont(.regular, size: 14)
                     .foregroundColor(.blue)
             }
         }

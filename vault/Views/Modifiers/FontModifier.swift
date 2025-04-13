@@ -38,6 +38,38 @@ struct CardTitleStyle: ViewModifier {
     }
 }
 
+struct LargeNumberStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .figtreeFont(.semibold, size: 20)
+            .foregroundColor(.black)
+    }
+}
+
+struct SecondaryTitleStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .figtreeFont(.regular, size: 14)
+            .foregroundColor(.secondary)
+    }
+}
+
+struct CardRowTitleStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .figtreeFont(.medium, size: 16)
+            .foregroundColor(.primary)
+    }
+}
+
+struct CardRowAmountStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .figtreeFont(.semibold, size: 16)
+            .foregroundColor(.primary)
+    }
+}
+
 extension View {
     func figtreeFont(_ font: FigtreeFont, size: CGFloat) -> some View {
         modifier(FigtreeTextStyle(font: font, size: size))
@@ -45,5 +77,21 @@ extension View {
     
     func cardTitleStyle() -> some View {
         modifier(CardTitleStyle())
+    }
+    
+    func largeNumberStyle() -> some View {
+        modifier(LargeNumberStyle())
+    }
+    
+    func secondaryTitleStyle() -> some View {
+        modifier(SecondaryTitleStyle())
+    }
+    
+    func cardRowTitleStyle() -> some View {
+        modifier(CardRowTitleStyle())
+    }
+    
+    func cardRowAmountStyle() -> some View {
+        modifier(CardRowAmountStyle())
     }
 }

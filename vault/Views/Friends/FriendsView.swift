@@ -6,6 +6,9 @@ struct FriendsView: View {
     
     var body: some View {
         VStack {
+            Text("My Friends")
+                .cardTitleStyle()
+            
             // Search bar
             SearchBar(text: $viewModel.searchQuery)
                 .padding()
@@ -16,12 +19,10 @@ struct FriendsView: View {
                     if viewModel.isLoading {
                         ProgressView()
                             .frame(maxWidth: .infinity, alignment: .center)
-                            .listRowBackground(Color.clear)
                     } else if viewModel.searchResults.isEmpty {
                         Text("No users found")
                             .foregroundColor(.secondary)
                             .frame(maxWidth: .infinity, alignment: .center)
-                            .listRowBackground(Color.clear)
                     } else {
                         ForEach(viewModel.searchResults) { user in
                             UserSearchRow(
@@ -38,25 +39,25 @@ struct FriendsView: View {
                 }
             } else {
                 // Friends list
-                List {
-                    if viewModel.isLoading {
-                        ProgressView()
-                            .frame(maxWidth: .infinity, alignment: .center)
-                            .listRowBackground(Color.clear)
-                    } else if viewModel.friends.isEmpty {
-                        Text("No friends yet")
-                            .foregroundColor(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                            .listRowBackground(Color.clear)
-                    } else {
-                        ForEach(viewModel.friends) { friend in
-                            FriendRow(friend: friend)
+                ScrollView {
+                    VStack (spacing: 16){
+                        if viewModel.isLoading {
+                            ProgressView()
+                                .frame(maxWidth: .infinity, alignment: .center)
+                        } else if viewModel.friends.isEmpty {
+                            Text("No friends yet")
+                                .foregroundColor(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .center)
+                        } else {
+                            ForEach(viewModel.friends) { friend in
+                                FriendRow(friend: friend)
+                            }
                         }
                     }
                 }
             }
         }
-        .navigationTitle("Friends")
+        .appBackground()
         .task {
             await viewModel.loadFriends(forUserID: userID)
         }
@@ -135,6 +136,9 @@ struct FriendRow: View {
     
     var body: some View {
         HStack {
+            Image(systemName: "person.fill")
+                .foregroundColor(.blue)
+            
             VStack(alignment: .leading) {
                 Text(friend.username)
                     .font(.headline)
@@ -142,13 +146,9 @@ struct FriendRow: View {
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
-            
-            Spacer()
-            
-            Image(systemName: "person.fill")
-                .foregroundColor(.blue)
         }
         .padding(.vertical, 4)
+        .padding(.horizontal, 16)
     }
 }
 

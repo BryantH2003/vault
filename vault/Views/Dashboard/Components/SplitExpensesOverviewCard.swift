@@ -71,7 +71,7 @@ struct SplitExpensesOverviewCard: View {
                 if !expensesOwedToYou.isEmpty {
                                     
                     Text(totalOwedToYou, format: .currency(code: "USD"))
-                        .figtreeFont(.medium, size: 16)
+                        .figtreeFont(.semibold, size: 20)
                         .foregroundColor(.black)
                             
                     ForEach(expensesOwedToYou, id: \.id) { expense in
@@ -110,26 +110,22 @@ private struct SplitExpenseRow: View {
         VStack(spacing: 8) {
             HStack {
                 Text(title)
-                    .figtreeFont(.medium, size: 16)
-                    .foregroundColor(.primary)
+                    .cardRowTitleStyle()
                 
                 Spacer()
                 
                 Text(amount, format: .currency(code: "USD"))
-                    .figtreeFont(.semibold, size: 16)
-                    .foregroundColor(.primary)
+                    .cardRowAmountStyle()
             }
             
             HStack {
                 Text(fullName)
-                    .figtreeFont(.regular, size: 14)
-                    .foregroundColor(.secondary)
+                    .secondaryTitleStyle()
                 
                 Spacer()
                 
                 Text(date.formatted(date: .abbreviated, time: .omitted))
-                    .figtreeFont(.regular, size: 14)
-                    .foregroundColor(.secondary)
+                    .secondaryTitleStyle()
             }
         }
     }
