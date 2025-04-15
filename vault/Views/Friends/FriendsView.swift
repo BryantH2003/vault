@@ -15,25 +15,27 @@ struct FriendsView: View {
             
             if viewModel.isSearching {
                 // Search results
-                List {
-                    if viewModel.isLoading {
-                        ProgressView()
-                            .frame(maxWidth: .infinity, alignment: .center)
-                    } else if viewModel.searchResults.isEmpty {
-                        Text("No users found")
-                            .foregroundColor(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .center)
-                    } else {
-                        ForEach(viewModel.searchResults) { user in
-                            UserSearchRow(
-                                user: user,
-                                friendshipStatus: viewModel.getFriendshipStatus(for: user.id),
-                                onAddFriend: {
-                                    Task {
-                                        await viewModel.sendFriendRequest(to: user.id)
+                ScrollView {
+                    VStack (spacing: 16){
+                        if viewModel.isLoading {
+                            ProgressView()
+                                .frame(maxWidth: .infinity, alignment: .center)
+                        } else if viewModel.searchResults.isEmpty {
+                            Text("No users found")
+                                .foregroundColor(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .center)
+                        } else {
+                            ForEach(viewModel.searchResults) { user in
+                                UserSearchRow(
+                                    user: user,
+                                    friendshipStatus: viewModel.getFriendshipStatus(for: user.id),
+                                    onAddFriend: {
+                                        Task {
+                                            await viewModel.sendFriendRequest(to: user.id)
+                                        }
                                     }
-                                }
-                            )
+                                )
+                            }
                         }
                     }
                 }
@@ -50,7 +52,7 @@ struct FriendsView: View {
                                 .frame(maxWidth: .infinity, alignment: .center)
                         } else {
                             ForEach(viewModel.friends) { friend in
-                                FriendRow(friend: friend)
+                                FriendRow(friend: friend, currentUserID: userID)
                             }
                         }
                     }
@@ -102,12 +104,14 @@ struct UserSearchRow: View {
     
     var body: some View {
         HStack {
+            Image(systemName: "person.fill")
+                .foregroundColor(.blue)
+            
             VStack(alignment: .leading) {
                 Text(user.username)
-                    .font(.headline)
+                    .cardRowTitleStyle()
                 Text(user.email)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .secondaryTitleStyle()
             }
             
             Spacer()
@@ -126,29 +130,48 @@ struct UserSearchRow: View {
                     .foregroundColor(.green)
             }
         }
-        .padding(.vertical, 4)
+        .friendRowCardStyle()
     }
 }
 
 // Row view for friends list
 struct FriendRow: View {
     let friend: User
+    let currentUserID: UUID
+    @State private var showingDetail = false
     
     var body: some View {
-        HStack {
-            Image(systemName: "person.fill")
-                .foregroundColor(.blue)
-            
-            VStack(alignment: .leading) {
-                Text(friend.username)
-                    .font(.headline)
-                Text(friend.email)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
+        Button(action: {
+            showingDetail = true
+        }) {
+            HStack {
+                Image(systemName: "person.fill")
+                    .foregroundColor(.blue)
+                
+                VStack(alignment: .leading) {
+                    Text(friend.fullName ?? friend.username)
+                        .cardRowTitleStyle()
+                    Text(friend.username)
+                        .secondaryTitleStyle()
+                }
+                
+                Spacer()
+                
+                VStack(alignment: .trailing) {
+                    if (friend.userStatus != nil) {
+                        Text(friend.userStatus ?? "No user status")
+                            .cardTitleStyle()
+                    } else {
+                        Text("No user status")
+                            .secondaryTitleStyle()
+                    }
+                }
             }
+            .friendRowCardStyle()
         }
-        .padding(.vertical, 4)
-        .padding(.horizontal, 16)
+        .sheet(isPresented: $showingDetail) {
+            FriendDetailView(friend: friend, currentUserID: currentUserID)
+        }
     }
 }
 

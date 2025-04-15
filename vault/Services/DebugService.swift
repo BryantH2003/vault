@@ -348,6 +348,7 @@ class DebugService {
                 monthlyIncome: 6000,
                 monthlySavingsGoal: 1500,
                 monthlySpendingLimit: 3000,
+                userStatus: nil,
                 createdAt: Date(),
                 updatedAt: Date()
             ),
@@ -361,6 +362,7 @@ class DebugService {
                 monthlyIncome: 7000,
                 monthlySavingsGoal: 2000,
                 monthlySpendingLimit: 3500,
+                userStatus: "Going broke",
                 createdAt: Date(),
                 updatedAt: Date()
             ),
@@ -374,6 +376,7 @@ class DebugService {
                 monthlyIncome: 5500,
                 monthlySavingsGoal: 1200,
                 monthlySpendingLimit: 2800,
+                userStatus: "Need more cash",
                 createdAt: Date(),
                 updatedAt: Date()
             ),
@@ -387,6 +390,7 @@ class DebugService {
                 monthlyIncome: 6500,
                 monthlySavingsGoal: 1800,
                 monthlySpendingLimit: 3200,
+                userStatus: nil,
                 createdAt: Date(),
                 updatedAt: Date()
             )

@@ -14,6 +14,7 @@ struct User: Identifiable, Codable {
     var monthlyIncome: Double
     var monthlySavingsGoal: Double
     var monthlySpendingLimit: Double
+    var userStatus: String?
     var createdAt: Date
     var updatedAt: Date
     
@@ -28,6 +29,7 @@ struct User: Identifiable, Codable {
          monthlyIncome: Double,
          monthlySavingsGoal: Double,
          monthlySpendingLimit: Double,
+         userStatus: String? = nil,
          createdAt: Date,
          updatedAt: Date) {
         self.id = id
@@ -41,6 +43,7 @@ struct User: Identifiable, Codable {
         self.monthlyIncome = monthlyIncome
         self.monthlySavingsGoal = monthlySavingsGoal
         self.monthlySpendingLimit = monthlySpendingLimit
+        self.userStatus = userStatus
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }
@@ -57,6 +60,7 @@ struct User: Identifiable, Codable {
         case monthlyIncome
         case monthlySavingsGoal
         case monthlySpendingLimit
+        case userStatus
         case createdAt
         case updatedAt
     }
@@ -81,6 +85,7 @@ struct User: Identifiable, Codable {
         self.monthlyIncome = try container.decode(Double.self, forKey: .monthlyIncome)
         self.monthlySavingsGoal = try container.decode(Double.self, forKey: .monthlySavingsGoal)
         self.monthlySpendingLimit = try container.decode(Double.self, forKey: .monthlySpendingLimit)
+        self.userStatus = try container.decodeIfPresent(String.self, forKey: .userStatus)
         self.createdAt = try container.decode(Date.self, forKey: .createdAt)
         self.updatedAt = try container.decode(Date.self, forKey: .updatedAt)
     }
@@ -100,6 +105,7 @@ struct User: Identifiable, Codable {
         try container.encode(monthlyIncome, forKey: .monthlyIncome)
         try container.encode(monthlySavingsGoal, forKey: .monthlySavingsGoal)
         try container.encode(monthlySpendingLimit, forKey: .monthlySpendingLimit)
+        try container.encodeIfPresent(userStatus, forKey: .userStatus)
         try container.encode(createdAt, forKey: .createdAt)
         try container.encode(updatedAt, forKey: .updatedAt)
     }
