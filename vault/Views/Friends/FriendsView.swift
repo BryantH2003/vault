@@ -149,7 +149,7 @@ struct FriendRow: View {
                     .foregroundColor(.blue)
                 
                 VStack(alignment: .leading) {
-                    Text(friend.fullName ?? friend.username)
+                    Text(friend.fullName)
                         .cardRowTitleStyle()
                     Text(friend.username)
                         .secondaryTitleStyle()

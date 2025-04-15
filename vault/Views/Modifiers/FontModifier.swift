@@ -70,6 +70,16 @@ struct CardRowAmountStyle: ViewModifier {
     }
 }
 
+struct FriendDetailPaidByTagStyle: ViewModifier {
+    var textColor: Color
+    
+    func body(content: Content) -> some View {
+        content
+            .figtreeFont(.regular, size: 14)
+            .foregroundColor(textColor)
+    }
+}
+
 extension View {
     func figtreeFont(_ font: FigtreeFont, size: CGFloat) -> some View {
         modifier(FigtreeTextStyle(font: font, size: size))
@@ -93,5 +103,9 @@ extension View {
     
     func cardRowAmountStyle() -> some View {
         modifier(CardRowAmountStyle())
+    }
+    
+    func friendDetailPaidByTagStyle(textColor: Color) -> some View {
+        modifier(FriendDetailPaidByTagStyle(textColor: textColor))
     }
 }

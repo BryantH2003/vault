@@ -57,8 +57,12 @@ class DebugService {
         let categories = try await createDummyCategories()
         print("Created \(categories.count) categories")
         
+        // Create additional users (excluding the current user)
+        let additionalUsers = try await createDummyUsers()
+        print("Created \(additionalUsers.count) additional users")
+        
         // Create expenses for the current user
-        try await createDummyExpenses(forUserID: userID, categories: categories)
+        try await createDummyExpenses(forUserID: userID, categories: categories, otherUsers: additionalUsers)
         print("Created expenses")
         
         try await createDummyFixedExpenses(forUserID: userID, categories: categories)
@@ -72,10 +76,6 @@ class DebugService {
         
         try await createDummySavingsGoals(forUserID: userID)
         print("Created saving goals")
-        
-        // Create additional users (excluding the current user)
-        let additionalUsers = try await createDummyUsers()
-        print("Created \(additionalUsers.count) additional users")
         
         // Create friendships between current user and dummy users
         try await createDummyFriendships(forUserID: userID, withUsers: additionalUsers)
@@ -129,7 +129,7 @@ class DebugService {
         }
     }
     
-    private func createDummyExpenses(forUserID userId: UUID, categories: [Category]) async throws {
+    private func createDummyExpenses(forUserID userId: UUID, categories: [Category], otherUsers: [User]) async throws {
         let expenses = [
             Expense(id: UUID(), userID: userId, categoryID: categories[7].id, title: "Weekly Groceries", amount: 150.00, transactionDate: Date(), vendor: "Whole Foods"),
             Expense(id: UUID(), userID: userId, categoryID: categories[11].id, title: "Movie Night", amount: 30.00, transactionDate: Date().addingTimeInterval(-86400), vendor: "AMC"),
@@ -139,6 +139,7 @@ class DebugService {
             Expense(id: UUID(), userID: userId, categoryID: categories[6].id, title: "Boba", amount: 12.00, transactionDate: Date().addingTimeInterval(-1200), vendor: "Tiger Sugar"),
             Expense(id: UUID(), userID: userId, categoryID: categories[7].id, title: "Costco Groceries", amount: 87.00, transactionDate: Date().addingTimeInterval(-172800 * 7.3), vendor: "Costco"),
             Expense(id: UUID(), userID: userId, categoryID: categories[12].id, title: "Hang Out with Friends", amount: 37.00, transactionDate: Date().addingTimeInterval(-172800 * 7.4), vendor: "Costco"),
+            Expense(id: UUID(), userID: otherUsers[0].id, categoryID: categories[5].id, title: "Chiptole", amount: 12.00, transactionDate: Date().addingTimeInterval(-172800 * 7.4), vendor: "Chiptole")
         ]
         
         for expense in expenses {

@@ -14,6 +14,16 @@ struct FriendDetailView: View {
                     
                     if let latestExpense = viewModel.latestExpense {
                         LatestExpenseSection(expense: latestExpense)
+                    } else {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Latest Expense")
+                                .cardTitleStyle()
+                            
+                            VStack(alignment: .center) {
+                                Text("No transaction history.")
+                                    .secondaryTitleStyle()
+                            }
+                        }
                     }
                     
                     SplitExpensesSection(
@@ -76,11 +86,7 @@ private struct ProfileSection: View {
                 .font(.subheadline)
                 .foregroundColor(.secondary)
         }
-        .padding()
-        .frame(maxWidth: .infinity)
-        .background(Color(.systemBackground))
-        .cornerRadius(15)
-        .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+        .friendDetailSectionCardStyle()
     }
 }
 
@@ -91,30 +97,23 @@ private struct LatestExpenseSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Latest Expense")
-                .font(.headline)
-                .padding(.bottom, 4)
+                .cardTitleStyle()
             
             HStack {
                 VStack(alignment: .leading) {
                     Text(expense.title)
-                        .font(.subheadline)
-                        .bold()
+                        .cardRowTitleStyle()
                     Text(expense.transactionDate, style: .date)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .secondaryTitleStyle()
                 }
                 
                 Spacer()
                 
                 Text(String(format: "$%.2f", expense.amount))
-                    .font(.headline)
+                    .cardRowAmountStyle()
             }
         }
-        .padding()
-        .frame(maxWidth: .infinity)
-        .background(Color(.systemBackground))
-        .cornerRadius(15)
-        .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+        .friendDetailSectionCardStyle()
     }
 }
 
@@ -127,15 +126,13 @@ private struct SplitExpensesSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Split Expenses")
-                .font(.headline)
-                .padding(.bottom, 4)
+                .cardTitleStyle()
             
             if isLoading {
                 ProgressView()
             } else if splitExpenses.isEmpty {
                 Text("No split expenses")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .secondaryTitleStyle()
             } else {
                 ForEach(splitExpenses, id: \.expense.id) { expenseData in
                     SplitExpenseRow(
@@ -150,11 +147,7 @@ private struct SplitExpensesSection: View {
                 }
             }
         }
-        .padding()
-        .frame(maxWidth: .infinity)
-        .background(Color(.systemBackground))
-        .cornerRadius(15)
-        .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+        .friendDetailSectionCardStyle()
     }
 }
 
@@ -167,17 +160,24 @@ private struct SplitExpenseRow: View {
         HStack {
             VStack(alignment: .leading) {
                 Text(splitExpense.expenseDescription)
-                    .font(.subheadline)
+                    .cardRowTitleStyle()
                 Text(splitExpense.creationDate, style: .date)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                    .secondaryTitleStyle()
+                
+                if (splitExpense.payerID == currentUserID) {
+                    Text("Paid by you")
+                        .friendDetailPaidByTagStyle(textColor: .green)
+                } else {
+                    Text("Paid by friend")
+                        .friendDetailPaidByTagStyle(textColor: .blue)
+                }
             }
             
             Spacer()
             
             VStack(alignment: .trailing) {
-                Text(String(format: "$%.2f", splitExpense.totalAmount))
-                    .font(.headline)
+                Text(String(format: "$%.2f", participant.amountDue))
+                    .cardRowAmountStyle()
                 
                 Text(participant.status.capitalized)
                     .font(.caption)
