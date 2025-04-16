@@ -4,6 +4,8 @@ struct SplitExpensesOverviewCard: View {
     let expensesYouOwe: [SplitExpense]
     let expensesOwedToYou: [SplitExpense]
     let participants: [UUID: [SplitExpenseParticipant]]
+    let splitExpenses: [(expense: SplitExpense, participants: [SplitExpenseParticipant])]
+    let isLoading: Bool
     let users: [UUID: User]
     let currentUserID: UUID
     
@@ -31,72 +33,11 @@ struct SplitExpensesOverviewCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("People You Owe")
-                    .cardTitleStyle()
-                if !expensesYouOwe.isEmpty {
-                        
-                    Text(totalYouOwe, format: .currency(code: "USD"))
-                        .figtreeFont(.semibold, size: 20)
-                        .foregroundColor(.primary)
-                    
-                    ForEach(expensesYouOwe, id: \.id) { expense in
-                        if let participantsList = participants[expense.id] {
-                            ForEach(participantsList, id: \.id) { participant in
-                                if let user = users[expense.creatorID] {
-                                    SplitExpenseRow(
-                                        title: expense.expenseDescription,
-                                        fullName: user.fullName ?? user.username,
-                                        amount: participant.amountDue,
-                                        date: expense.creationDate
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                } else {
-                    Text("You currently owe no one")
-                        .font(.caption)
-                        .figtreeFont(.medium, size: 12)
-                }
-            }
-            
-            Divider()
-            
-            VStack(alignment: .leading, spacing: 12) {
-                Text("People that Owe You")
-                    .cardTitleStyle()
-            
-                if !expensesOwedToYou.isEmpty {
-                                    
-                    Text(totalOwedToYou, format: .currency(code: "USD"))
-                        .figtreeFont(.semibold, size: 20)
-                        .foregroundColor(.black)
-                            
-                    ForEach(expensesOwedToYou, id: \.id) { expense in
-                        if let participantsList = participants[expense.id] {
-                            ForEach(participantsList, id: \.id) { participant in
-                                if let user = users[participant.userID] {
-                                    SplitExpenseRow(
-                                        title: expense.expenseDescription,
-                                        fullName: user.fullName ?? user.username,
-                                        amount: participant.amountDue,
-                                        date: expense.creationDate
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    
-                } else {
-                    Text("No one owes you")
-                        .font(.caption)
-                        .figtreeFont(.medium, size: 12)
-                }
-            }
+            SplitExpensesSection (
+                splitExpenses: splitExpenses,
+                isLoading: isLoading,
+                currentUserID: currentUserID)
         }
-        .padding()
     }
 }
 

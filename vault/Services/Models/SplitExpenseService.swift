@@ -26,7 +26,13 @@ class SplitExpenseService {
     func getSplitExpense(id: UUID) async throws -> SplitExpense? {
         let docRef = documentReference(for: id)
         let document = try await docRef.getDocument()
-        return try? document.data(as: SplitExpense.self)
+        if let splitExpense = try? document.data(as: SplitExpense.self) {
+            // Verify that the returned split expense has the correct ID
+            if splitExpense.id == id {
+                return splitExpense
+            }
+        }
+        return nil
     }
     
     func getAllSplitExpenses() async throws -> [SplitExpense] {
@@ -55,18 +61,20 @@ class SplitExpenseService {
     }
     
     func getSplitExpensesUserOwes(forUserID: UUID) async throws -> [SplitExpense] {
-        // Get expenses where user is payer
-        let payerSnapshot = try await db.collection("splitExpenses")
-            .whereField("payerID", isEqualTo: forUserID.uuidString)
+        // Get all participant entries for the current user
+        let participantsSnapshot = try await db.collection("splitExpenseParticipants")
+            .whereField("userID", isEqualTo: forUserID.uuidString)
             .getDocuments()
         
         var splitExpenses: [SplitExpense] = []
-        let payerExpenses = try payerSnapshot.documents.compactMap { try $0.data(as: SplitExpense.self) }
         
-        // Add payer expenses that aren't already included (where user is payer but not creator)
-        for expense in payerExpenses {
-            if !splitExpenses.contains(where: { $0.id == expense.id }) {
-                splitExpenses.append(expense)
+        print("TEST:", participantsSnapshot.documents[0].data())
+        
+        // For each participant entry, get the corresponding split expense
+        for document in participantsSnapshot.documents {
+            if let participant = try? document.data(as: SplitExpenseParticipant.self),
+               let splitExpense = try await getSplitExpense(id: participant.splitID) {
+                splitExpenses.append(splitExpense)
             }
         }
         
@@ -76,25 +84,11 @@ class SplitExpenseService {
     /// Get split expenses where user is a participant
     func getSplitExpensesOthersOweUser(userID: UUID) async throws -> [SplitExpense] {
         // Get expenses where the user is creator
-        let participantsSnapshot = try await db.collection("splitExpenses")
+        let creatorSnapshot = try await db.collection("splitExpenses")
             .whereField("creatorID", isEqualTo: userID.uuidString)
             .getDocuments()
         
-        
-        var splitExpenses: [SplitExpense] = []
-        let payerExpenses = try participantsSnapshot.documents.compactMap { try $0.data(as: SplitExpense.self) }
-        
-        for document in participantsSnapshot.documents {
-            if let expenseID = UUID(uuidString: document.data()["id"] as? String ?? "") {
-                if let splitExpense = try await getSplitExpense(id: expenseID) {
-                    splitExpenses.append(splitExpense)
-                }
-
-            }
-
-        }
-
-        return splitExpenses
+        return try creatorSnapshot.documents.compactMap { try $0.data(as: SplitExpense.self) }
     }
     
     /// Get unpaid split expenses for a user

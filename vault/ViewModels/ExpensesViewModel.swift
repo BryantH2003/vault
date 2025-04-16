@@ -15,6 +15,8 @@ class ExpensesViewModel: ObservableObject {
     @Published var outstandingPaymentsList: [OutstandingPayment] = []
     @Published var splitExpensesYouOweList: [SplitExpense] = []
     @Published var splitExpensesOwedToYouList: [SplitExpense] = []
+    @Published var splitExpensesList: [(expense: SplitExpense, participants: [SplitExpenseParticipant])] = []
+    @Published var isLoadingPayments = false
     @Published var splitParticipants: [UUID: [SplitExpenseParticipant]] = [:]
     @Published var users: [UUID: User] = [:]
     @Published var savingsGoalsList: [SavingsGoal] = []
@@ -139,31 +141,57 @@ class ExpensesViewModel: ObservableObject {
             outstandingPaymentsList = try await outstandingService.getOutstandingPayments(forUserID: userID)
             
             // Load split expenses list
+            var allExpenses: [SplitExpense] = []
+            
+            // Load split expenses where current user is the payer
             let expensesYouOwe = try await splitExpenseService.getSplitExpensesUserOwes(forUserID: userID)
-            splitExpensesYouOweList = expensesYouOwe.filter { $0.payerID == userID }
             
             // Get expenses where others owe you (you are the creator)
             let expensesOtherOweYou = try await splitExpenseService.getSplitExpensesOthersOweUser(userID: userID)
-            splitExpensesOwedToYouList = expensesOtherOweYou.filter { $0.payerID != userID }
             
-            // Load split expense participants and user details
-            //print("Loading split expense participants")
-            let allSplitExpenses = splitExpensesYouOweList + splitExpensesOwedToYouList
-            for expense in allSplitExpenses {
-                let participants = try await splitExpenseParticipantService.getUnpaidParticipants(forExpenseID: expense.id)
-                splitParticipants[expense.id] = participants
+            allExpenses = expensesYouOwe + expensesOtherOweYou
+            
+            // Load participants for each split expense
+            var expensesWithParticipants: [(expense: SplitExpense, participants: [SplitExpenseParticipant])] = []
+            
+            // Load participants for each split expense
+            for expense in allExpenses {
+                let participants = try await splitExpenseParticipantService.getParticipants(forExpenseID: expense.id)
+                var relevantParticipant: [SplitExpenseParticipant] = []
                 
-                // Load user details for participants and payers
-                let userIDs = Set([expense.payerID] + participants.map { $0.userID })
-                for participantID in userIDs {
-                    if users[participantID] == nil {
-                        if let user = try await userService.getUser(id: participantID) {
-                            users[participantID] = user
-                            //print("Loaded user: \(user.fullName) for split expense")
+                // If you are the creator of the split expense
+                if expense.creatorID == userID {
+                    
+                    for participant in participants {
+                        relevantParticipant.append(participant)
+                    }
+        
+                } else {
+                    // If someone else is creator, get current user's participant status
+                    for participant in participants {
+                        
+                        if participant.userID == userID {
+                            relevantParticipant.append(participant)
+                            break
                         }
+                        
                     }
                 }
+                
+                // Only add the expense if we found the relevant participant
+                expensesWithParticipants.append((
+                    expense: expense,
+                    participants: relevantParticipant
+                ))
+                
             }
+            
+            // Sort by creation date, most recent first
+            expensesWithParticipants.sort { $0.expense.creationDate > $1.expense.creationDate }
+            
+            splitExpensesList = expensesWithParticipants
+            splitExpensesYouOweList = allExpenses.filter { $0.creatorID != userID }
+            splitExpensesOwedToYouList = allExpenses.filter { $0.creatorID == userID }
             
             // Load savings goals list
             // print("Loading savings goals")

@@ -172,11 +172,13 @@ class AddExpenseViewModel: ObservableObject {
                 
                 let savedExpense = try await expenseService.createExpense(expense)
                 
+                for participant in selectedParticipants {
+                    
+                }
                 // Create split expense
                 let splitExpense = SplitExpense(
                     expenseDescription: title,
                     totalAmount: amount,
-                    payerID: userID,
                     creatorID: userID
                 )
                 

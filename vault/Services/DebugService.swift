@@ -257,14 +257,12 @@ class DebugService {
             SplitExpense(
                 expenseDescription: "Dinner at Italian Restaurant",
                 totalAmount: 150.00,
-                payerID: userID,
                 creatorID: users[0].id,
                 creationDate: Date()
             ),
             SplitExpense(
                 expenseDescription: "Groceries for Party",
                 totalAmount: 200.00,
-                payerID: users[1].id,
                 creatorID: userID,
                 creationDate: Date().addingTimeInterval(-172800)
             ),
@@ -273,14 +271,12 @@ class DebugService {
             SplitExpense(
                 expenseDescription: "Movie Night",
                 totalAmount: 90.00,
-                payerID: users[0].id,
                 creatorID: userID,
                 creationDate: Date().addingTimeInterval(-86400)
             ),
             SplitExpense(
                 expenseDescription: "Concert Tickets",
                 totalAmount: 300.00,
-                payerID: userID,
                 creatorID: users[1].id,
                 creationDate: Date().addingTimeInterval(-259200)
             )
@@ -292,11 +288,11 @@ class DebugService {
             let createdSplitExpense = try await databaseService.createSplitExpense(splitExpense)
             let amountPerPerson = splitExpense.totalAmount / 2.0 // Split between 2 people
             
-            if splitExpense.payerID == userID {
+            if splitExpense.creatorID == userID {
                 // If user logged in is the payer that means the user logged in owes someone
                 let participant = SplitExpenseParticipant(
                     splitID: createdSplitExpense.id,
-                    userID: userID,
+                    userID: users[0].id,
                     amountDue: amountPerPerson,
                     status: "Pending"
                 )
@@ -305,7 +301,7 @@ class DebugService {
                 // Others paid, create participant for current user
                 let participant = SplitExpenseParticipant(
                     splitID: createdSplitExpense.id,
-                    userID: createdSplitExpense.payerID,
+                    userID: userID,
                     amountDue: amountPerPerson,
                     status: "Pending"
                 )

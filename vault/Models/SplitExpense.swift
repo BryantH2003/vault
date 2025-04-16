@@ -5,20 +5,17 @@ struct SplitExpense: Identifiable, Codable, Hashable {
     let id: UUID
     var expenseDescription: String
     var totalAmount: Double
-    var payerID: UUID
     var creatorID: UUID
     var creationDate: Date
     
     init(id: UUID = UUID(),
          expenseDescription: String,
          totalAmount: Double,
-         payerID: UUID,
          creatorID: UUID,
          creationDate: Date = Date()) {
         self.id = id
         self.expenseDescription = expenseDescription
         self.totalAmount = totalAmount
-        self.payerID = payerID
         self.creatorID = creatorID
         self.creationDate = creationDate
     }
@@ -27,7 +24,6 @@ struct SplitExpense: Identifiable, Codable, Hashable {
         case id
         case expenseDescription
         case totalAmount
-        case payerID
         case creatorID
         case creationDate
     }
@@ -41,13 +37,7 @@ struct SplitExpense: Identifiable, Codable, Hashable {
         } else {
             self.id = try container.decode(UUID.self, forKey: .id)
         }
-        
-        if let payerIDString = try? container.decode(String.self, forKey: .payerID) {
-            self.payerID = UUID(uuidString: payerIDString) ?? UUID()
-        } else {
-            self.payerID = try container.decode(UUID.self, forKey: .payerID)
-        }
-        
+
         if let creatorIDString = try? container.decode(String.self, forKey: .creatorID) {
             self.creatorID = UUID(uuidString: creatorIDString) ?? UUID()
         } else {
@@ -66,7 +56,6 @@ struct SplitExpense: Identifiable, Codable, Hashable {
         try container.encode(id.uuidString, forKey: .id)
         try container.encode(expenseDescription, forKey: .expenseDescription)
         try container.encode(totalAmount, forKey: .totalAmount)
-        try container.encode(payerID.uuidString, forKey: .payerID)
         try container.encode(creatorID.uuidString, forKey: .creatorID)
         try container.encode(creationDate, forKey: .creationDate)
     }

@@ -37,10 +37,13 @@ struct DashboardView: View {
                     .cardBackground()
                     
                     if !$viewModel.splitExpensesYouOweList.isEmpty || !$viewModel.splitExpensesOwedToYouList.isEmpty {
+                        
                         SplitExpensesOverviewCard(
                             expensesYouOwe: viewModel.splitExpensesYouOweList,
                             expensesOwedToYou: viewModel.splitExpensesOwedToYouList,
                             participants: viewModel.splitParticipants,
+                            splitExpenses: viewModel.splitExpensesList,
+                            isLoading: viewModel.isLoadingPayments,
                             users: viewModel.users,
                             currentUserID: userID
                         )
