@@ -6,6 +6,11 @@ class CategoryService {
     static let shared = CategoryService()
     private let db = Firestore.firestore()
     
+    enum CategoryError: Error {
+        case notFound
+        case decodingError
+    }
+    
     private func documentReference(for id: UUID) -> DocumentReference {
         return db.collection("categories").document(id.uuidString)
     }
@@ -16,10 +21,28 @@ class CategoryService {
         return category
     }
     
-    func getCategory(id: UUID) async throws -> Category? {
+    func getCategoryByID(id: UUID) async throws -> Category? {
         let docRef = documentReference(for: id)
         let document = try await docRef.getDocument()
         return try? document.data(as: Category.self)
+    }
+    
+    func getCategoryByName(name: String) async throws -> Category {
+        let snapshot = try await db.collection("categories")
+            .whereField("categoryName", isEqualTo: name)
+            .getDocuments()
+        
+        if let document = snapshot.documents.first {
+            do {
+                let category = try document.data(as: Category.self)
+                return category
+            } catch {
+                print("Error decoding category: \(error)")
+                throw CategoryError.decodingError
+            }
+        } else {
+            throw CategoryError.notFound
+        }
     }
     
     func getCategories(forUserID: UUID) async throws -> [Category] {

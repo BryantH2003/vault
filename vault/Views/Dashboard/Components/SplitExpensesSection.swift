@@ -13,29 +13,14 @@ struct SplitExpensesSection: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Split Expenses")
-                .cardTitleStyle()
-            
-            if isLoading {
-                ProgressView()
-            } else if splitExpenses.isEmpty {
-                Text("No split expenses")
-                    .secondaryTitleStyle()
-            } else {
-                ForEach(splitExpenses, id: \.expense.id) { expenseData in
-                    SplitExpenseRow(
-                        splitExpense: expenseData.expense,
-                        participants: expenseData.participants,
-                        currentUserID: currentUserID
-                    )
-                    
-                    if expenseData.expense.id != splitExpenses.last?.expense.id {
-                        Divider()
-                    }
-                }
+            ForEach(splitExpenses, id: \.expense.id) { expenseData in
+                SplitExpenseRow(
+                    splitExpense: expenseData.expense,
+                    participants: expenseData.participants,
+                    currentUserID: currentUserID
+                )
             }
         }
-        .friendDetailSectionCardStyle()
     }
 }
 
@@ -43,6 +28,34 @@ private struct SplitExpenseRow: View {
     let splitExpense: SplitExpense
     let participants: [SplitExpenseParticipant]
     let currentUserID: UUID
+
+    private let userService = UserService.shared
+    
+    @State private var splitExpenseCreator: User?
+    
+    func getParticipantsPaymentStatusPending() -> Int {
+        var numPending = 0
+        
+        for participant in participants {
+            if participant.status ==  "Pending" {
+                numPending += 1
+            }
+        }
+        
+        return numPending
+    }
+    
+    func getParticipantsPaymentStatusPaid() -> Int {
+        var numPaid = 0
+        
+        for participant in participants {
+            if participant.status ==  "Paid" {
+                numPaid += 1
+            }
+        }
+        
+        return numPaid
+    }
     
     var body: some View {
         HStack {
@@ -53,10 +66,12 @@ private struct SplitExpenseRow: View {
                     .secondaryTitleStyle()
                 
                 if participants[0].userID == currentUserID {
-                    Text("Paid by you")
-                        .friendDetailPaidByTagStyle(textColor: .green)
+                    if let creatorName = splitExpenseCreator?.fullName {
+                        Text("You owe: \(creatorName)")
+                            .friendDetailPaidByTagStyle(textColor: .green)
+                    }
                 } else {
-                    Text("Paid by \(participants.count) friends")
+                    Text("\(participants.count) friends owe you")
                         .friendDetailPaidByTagStyle(textColor: .blue)
                 }
             }
@@ -64,7 +79,9 @@ private struct SplitExpenseRow: View {
             Spacer()
             
             VStack(alignment: .trailing) {
-                if participants[0].userID == currentUserID {
+                
+                if participants.count <= 1 {
+                    
                     Text(String(format: "$%.2f", participants[0].amountDue))
                         .cardRowAmountStyle()
                     
@@ -75,9 +92,29 @@ private struct SplitExpenseRow: View {
                         .padding(.vertical, 4)
                         .background(statusColor(for: participants[0].status).opacity(0.2))
                         .cornerRadius(8)
+                    
                 } else {
+                    
                     Text(String(format: "$%.2f", splitExpense.totalAmount))
                         .cardRowAmountStyle()
+                    
+                    if getParticipantsPaymentStatusPending() > 0 {
+                        Text("Pending \(getParticipantsPaymentStatusPaid())/\(participants.count)")
+                            .font(.caption)
+                            .foregroundColor(.orange)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(.orange.opacity(0.2))
+                            .cornerRadius(8)
+                    } else {
+                        Text("Paid")
+                            .font(.caption)
+                            .foregroundColor(.green)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(.green.opacity(0.2))
+                            .cornerRadius(8)
+                    }
                 }
                 
                 
@@ -91,6 +128,13 @@ private struct SplitExpenseRow: View {
             }
         }
         .padding(.vertical, 8)
+        .task {
+            do {
+                splitExpenseCreator = try await userService.getUser(id: splitExpense.creatorID)
+            } catch {
+                print("Error loading creator: \(error)")
+            }
+        }
     }
     
     private func statusColor(for status: String) -> Color {

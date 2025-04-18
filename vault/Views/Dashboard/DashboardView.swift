@@ -35,20 +35,18 @@ struct DashboardView: View {
                         previousTotalIncome: viewModel.previousMonthIncomeTotal
                     )
                     .cardBackground()
-                    
-                    if !$viewModel.splitExpensesYouOweList.isEmpty || !$viewModel.splitExpensesOwedToYouList.isEmpty {
                         
-                        SplitExpensesOverviewCard(
-                            expensesYouOwe: viewModel.splitExpensesYouOweList,
-                            expensesOwedToYou: viewModel.splitExpensesOwedToYouList,
-                            participants: viewModel.splitParticipants,
-                            splitExpenses: viewModel.splitExpensesList,
-                            isLoading: viewModel.isLoadingPayments,
-                            users: viewModel.users,
-                            currentUserID: userID
-                        )
-                        .cardBackground()
-                    }
+                    SplitExpensesOverviewCard(
+                        expensesYouOwe: viewModel.splitExpensesYouOweList,
+                        expensesOwedToYou: viewModel.splitExpensesOwedToYouList,
+                        participants: viewModel.splitParticipants,
+                        splitExpenses: viewModel.splitExpensesList,
+                        isLoading: viewModel.isLoadingPayments,
+                        users: viewModel.users,
+                        currentUserID: userID
+                    )
+                    .cardBackground()
+                    .environment(\.selectedDate, viewModel.selectedDate)
                     
                     RecentTransactionsCard(
                         expenses: viewModel.recentExpensesList,

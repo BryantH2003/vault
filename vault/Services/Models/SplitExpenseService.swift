@@ -67,9 +67,7 @@ class SplitExpenseService {
             .getDocuments()
         
         var splitExpenses: [SplitExpense] = []
-        
-        print("TEST:", participantsSnapshot.documents[0].data())
-        
+                
         // For each participant entry, get the corresponding split expense
         for document in participantsSnapshot.documents {
             if let participant = try? document.data(as: SplitExpenseParticipant.self),
@@ -91,25 +89,6 @@ class SplitExpenseService {
         return try creatorSnapshot.documents.compactMap { try $0.data(as: SplitExpense.self) }
     }
     
-    /// Get unpaid split expenses for a user
-    func getUnpaidSplitExpenses(userID: UUID) async throws -> [SplitExpense] {
-        let participantsSnapshot = try await db.collection("splitExpenseParticipants")
-            .whereField("userID", isEqualTo: userID.uuidString)
-            .whereField("hasPaid", isEqualTo: false)
-            .getDocuments()
-        
-        var splitExpenses: [SplitExpense] = []
-        for document in participantsSnapshot.documents {
-            if let expenseID = UUID(uuidString: document.data()["expenseID"] as? String ?? "") {
-                if let splitExpense = try await getSplitExpense(id: expenseID) {
-                    splitExpenses.append(splitExpense)
-                }
-
-            }
-        }
-        return splitExpenses
-    }
-    
     /// Get total amount owed to a user
     func getTotalAmountOwed(toUserID: UUID) async throws -> Double {
         let splitExpenses = try await getSplitExpensesUserOwes(forUserID: toUserID)
@@ -121,18 +100,6 @@ class SplitExpenseService {
         }
         
         return total
-    }
-    
-    /// Get total amount user owes others
-    func getTotalAmountUserOwes(userID: UUID) async throws -> Double {
-        let participantsSnapshot = try await db.collection("splitExpenseParticipants")
-            .whereField("userID", isEqualTo: userID.uuidString)
-            .whereField("hasPaid", isEqualTo: false)
-            .getDocuments()
-        
-        return try participantsSnapshot.documents.reduce(into: 0) { total, document in
-            total + (try document.data(as: SplitExpenseParticipant.self).amountDue)
-        }
     }
 }
 

@@ -20,10 +20,17 @@ class FriendDetailViewModel: ObservableObject {
         isLoadingPayments = true
         
         do {
+
+// MARK: LATEST EXPENSE
+            
             // Load latest expense
             if let expenses = try? await expenseService.getExpenses(forUserID: friendID) {
                 latestExpense = expenses.sorted(by: { $0.transactionDate > $1.transactionDate }).first
             }
+
+    // --------------------------------------------------------------
+
+// MARK: SPLIT EXPENSE
             
             var allExpenses: [SplitExpense] = []
             
@@ -55,13 +62,16 @@ class FriendDetailViewModel: ObservableObject {
             
             for expense in allExpenses {
                 let participants = try await splitExpenseParticipantService.getParticipants(forExpenseID: expense.id)
+                
                 var relevantParticipant: SplitExpenseParticipant?
                 
                 for participant in participants {
+                    if participant.userID == currentUserID || participant.userID == friendID {
                         expensesWithParticipants.append((
                             expense: expense,
                             participant: participant
                         ))
+                    }
                 }
             }
             
@@ -72,6 +82,9 @@ class FriendDetailViewModel: ObservableObject {
                 self.splitExpenses = expensesWithParticipants
                 self.isLoadingPayments = false
             }
+    
+    // --------------------------------------------------------------
+
             
         } catch {
             print("Error loading friend details: \(error.localizedDescription)")

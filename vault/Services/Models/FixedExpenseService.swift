@@ -40,7 +40,7 @@ class FixedExpenseService {
         return try snapshot.documents.compactMap { try $0.data(as: FixedExpense.self) }
     }
     
-    func getFixedExpenses(forUserID userID: UUID, in dateRange: ClosedRange<Date>) async throws -> [FixedExpense] {
+    func getFixedExpensesDateRange(forUserID userID: UUID, in dateRange: ClosedRange<Date>) async throws -> [FixedExpense] {
         let snapshot = try await db.collection("fixedExpenses")
             .whereField("userID", isEqualTo: userID.uuidString)
             .whereField("dueDate", isGreaterThanOrEqualTo: dateRange.lowerBound)
@@ -130,12 +130,12 @@ class FixedExpenseService {
     // MARK: - Helper Methods
     
     func calculateTotalAmount(forUserID userID: UUID, in dateRange: ClosedRange<Date>) async throws -> Double {
-        let expenses = try await getFixedExpenses(forUserID: userID, in: dateRange)
+        let expenses = try await getFixedExpensesDateRange(forUserID: userID, in: dateRange)
         return expenses.reduce(0) { $0 + $1.amount }
     }
     
     func calculateTotalAmountByCategory(forUserID userID: UUID, in dateRange: ClosedRange<Date>) async throws -> [UUID: Double] {
-        let expenses = try await getFixedExpenses(forUserID: userID, in: dateRange)
+        let expenses = try await getFixedExpensesDateRange(forUserID: userID, in: dateRange)
         return Dictionary(grouping: expenses, by: { $0.categoryID })
             .mapValues { expenses in expenses.reduce(0) { $0 + $1.amount } }
     }
