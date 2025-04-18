@@ -7,13 +7,14 @@ struct RecentTransactionsCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Recent Transactions")
-                .font(.headline)
-                .foregroundColor(.primary)
+                .cardTitleStyle()
             
             if expenses.isEmpty {
+                
+                // TODO: Add Button "Start Tracking Expenses!"
                 Text("No recent transactions")
-                    .foregroundColor(.secondary)
-                    .padding(.vertical, 8)
+                    .secondaryTitleStyle()
+                
             } else {
                 VStack(spacing: 12) {
                     ForEach(expenses) { expense in

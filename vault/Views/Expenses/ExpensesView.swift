@@ -149,14 +149,17 @@ private struct OutstandingPaymentsTabView: View {
                 .cardBackground()
             }
             
-            if !viewModel.splitExpensesYouOweList.isEmpty || !viewModel.splitExpensesOwedToYouList.isEmpty {
-                SplitExpensesSection(
-                    splitExpenses: viewModel.splitExpensesList,
-                    isLoading: viewModel.isLoadingPayments,
-                    currentUserID: userID
-                )
-                .cardBackground()
-            }
+            SplitExpensesOverviewCard(
+                expensesYouOwe: viewModel.splitExpensesYouOweList,
+                expensesOwedToYou: viewModel.splitExpensesOwedToYouList,
+                participants: viewModel.splitParticipants,
+                splitExpenses: viewModel.splitExpensesList,
+                isLoading: viewModel.isLoadingPayments,
+                users: viewModel.users,
+                currentUserID: userID
+            )
+            .cardBackground()
+            .environment(\.selectedDate, viewModel.selectedDate)
         }
     }
 }

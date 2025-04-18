@@ -37,6 +37,7 @@ class DashboardViewModel: ObservableObject {
     private let splitExpenseService = SplitExpenseService.shared
     private let splitExpenseParticipantService = SplitExpenseParticipantService.shared
     private let userService = UserService.shared
+    private let fixedExpenseService = FixedExpenseService.shared
     
     func loadDashboardData(forUserID userID: UUID) async {
         isLoading = true
@@ -69,6 +70,7 @@ class DashboardViewModel: ObservableObject {
             // Load split expenses
             // print("Loading split expenses")
             
+// MARK: *** Logic for getting Split Expense ***
             var allExpenses: [SplitExpense] = []
             
             // Load split expenses where current user is the payer
@@ -77,6 +79,7 @@ class DashboardViewModel: ObservableObject {
             // Get expenses where others owe you (you are the creator)
             let expensesOtherOweYou = try await splitExpenseService.getSplitExpensesOthersOweUser(userID: userID)
             
+            // Combine the lists
             allExpenses = expensesYouOwe + expensesOtherOweYou
             
             // Load split expense participants and user details
@@ -126,46 +129,69 @@ class DashboardViewModel: ObservableObject {
             
             splitExpensesOwedToYouList = allExpenses.filter { $0.creatorID == userID }
             
+    // --------------------------------------------------------------
+
+// MARK: Overview Card
+    
+    // CURRENT MONTH EXPENSES
+            
             // Load current month expenses
-            //print("Loading current month expenses")
             let monthlyExpensesList = try await expenseService.getExpensesInDateRange(forUserID: userID, in: startDate...endDate)
+            
             monthlyExpensesTotal = monthlyExpensesList.reduce(0) { $0 + $1.amount }
             
+            let fixedExpensesList = try await fixedExpenseService.getFixedExpensesDateRange(forUserID: userID, in: startDate...endDate)
+            
+            monthlyExpensesTotal = fixedExpensesList.reduce(0) { $0 + $1.amount }
+    
+    // --------------------------------------------------------------
+    
+    // PREV MONTH EXPENSES
+            
             // Load previous month expenses
-            //print("Loading previous month expenses")
             let previousExpensesList = try await expenseService.getExpensesInDateRange(forUserID: userID, in: previousStartDate...previousEndDate)
+            
             previousMonthExpensesTotal = previousExpensesList.reduce(0) { $0 + $1.amount }
             
-            // Calculate fixed and variable expenses for previous month
-            let (prevFixed, prevVariable) = previousExpensesList.reduce(into: (0.0, 0.0)) { result, expense in
-                if let category = categories[expense.categoryID], category.fixedExpense {
-                    result.0 += expense.amount
-                } else {
-                    result.1 += expense.amount
-                }
-            }
-                
+            // Load previous month expenses
+            let prevFixedExpensesList = try await fixedExpenseService.getFixedExpensesDateRange(forUserID: userID, in: startDate...endDate)
+            
+            previousMonthExpensesTotal = prevFixedExpensesList.reduce(0) { $0 + $1.amount }
+
+    // --------------------------------------------------------------
+
+    // MONTH INCOME
+            
             // Load current month income
-            //print("Loading current month income")
             let monthlyIncomeList = try await incomeService.getIncomes(forUserID: userID, in: startDate...endDate)
             monthlyIncomeTotal = monthlyIncomeList.reduce(0) { $0 + $1.amount }
             
+    // --------------------------------------------------------------
+
+    // PREV MONTH INCOME
+            
             // Load previous month income
-            //print("Loading previous month income")
             let previousIncomeList = try await incomeService.getIncomes(forUserID: userID, in: previousStartDate...previousEndDate)
             previousMonthIncomeTotal = previousIncomeList.reduce(0) { $0 + $1.amount }
+    // --------------------------------------------------------------
+
+    // SAVINGS CALCULATION
             
             // Calculate savings for both months
             monthlySavingsTotal = monthlyIncomeTotal - monthlyExpensesTotal
             previousMonthSavingsTotal = previousMonthIncomeTotal - previousMonthExpensesTotal
             
-            print("Current month - Income: \(monthlyIncomeTotal), Expenses: \(monthlyExpensesTotal), Savings: \(monthlySavingsTotal)")
-            print("Previous month - Income: \(previousMonthIncomeTotal), Expenses: \(previousMonthExpensesTotal), Savings: \(previousMonthSavingsTotal)")
+    // --------------------------------------------------------------
+
+// MARK: RECENT EXPENSES
             
             // Get recent expenses (last 5)
             recentExpensesList = Array(monthlyExpensesList
                 .sorted(by: { $0.transactionDate > $1.transactionDate })
                 .prefix(5))
+    
+    // --------------------------------------------------------------
+
             
         } catch {
             print("Error loading dashboard data: \(error.localizedDescription)")

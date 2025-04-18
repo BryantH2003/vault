@@ -57,6 +57,12 @@ class DebugService {
         let categories = try await createDummyCategories()
         print("Created \(categories.count) categories")
         
+        print()
+        for category in categories {
+            print(category)
+        }
+        print()
+        
         // Create additional users (excluding the current user)
         let additionalUsers = try await createDummyUsers()
         print("Created \(additionalUsers.count) additional users")
@@ -130,16 +136,89 @@ class DebugService {
     }
     
     private func createDummyExpenses(forUserID userId: UUID, categories: [Category], otherUsers: [User]) async throws {
-        let expenses = [
-            Expense(id: UUID(), userID: userId, categoryID: categories[7].id, title: "Weekly Groceries", amount: 150.00, transactionDate: Date(), vendor: "Whole Foods"),
-            Expense(id: UUID(), userID: userId, categoryID: categories[11].id, title: "Movie Night", amount: 30.00, transactionDate: Date().addingTimeInterval(-86400), vendor: "AMC"),
-            Expense(id: UUID(), userID: userId, categoryID: categories[12].id, title: "Concert Tickets", amount: 120.00, transactionDate: Date().addingTimeInterval(-172800), vendor: "Ticketmaster"),
-            Expense(id: UUID(), userID: userId, categoryID: categories[8].id, title: "Test Expense", amount: 220.00, transactionDate: Date().addingTimeInterval(-872800), vendor: "Wing Stop"),
-            Expense(id: UUID(), userID: userId, categoryID: categories[7].id, title: "Test Expense", amount: 50.00, transactionDate: Date().addingTimeInterval(-972800), vendor: "Kroger"),
-            Expense(id: UUID(), userID: userId, categoryID: categories[6].id, title: "Boba", amount: 12.00, transactionDate: Date().addingTimeInterval(-1200), vendor: "Tiger Sugar"),
-            Expense(id: UUID(), userID: userId, categoryID: categories[7].id, title: "Costco Groceries", amount: 87.00, transactionDate: Date().addingTimeInterval(-172800 * 7.3), vendor: "Costco"),
-            Expense(id: UUID(), userID: userId, categoryID: categories[12].id, title: "Hang Out with Friends", amount: 37.00, transactionDate: Date().addingTimeInterval(-172800 * 7.4), vendor: "Costco"),
-            Expense(id: UUID(), userID: otherUsers[0].id, categoryID: categories[5].id, title: "Chiptole", amount: 12.00, transactionDate: Date().addingTimeInterval(-172800 * 7.4), vendor: "Chiptole")
+        let categoryService = CategoryService()
+        
+        let expenses = try await [
+            Expense(
+                id: UUID(),
+                userID: userId,
+                categoryID: categoryService.getCategoryByName(name: "Groceries").id,
+                title: "Weekly Groceries",
+                amount: 150.00,
+                transactionDate: Date(),
+                vendor: "Whole Foods"),
+            Expense(
+                id: UUID(),
+                userID: userId,
+                categoryID: categoryService.getCategoryByName(name: "Date").id,
+                title: "Movie Night",
+                amount: 30.00,
+                transactionDate: Date().addingTimeInterval(-86400),
+                vendor: "AMC"),
+            Expense(
+                id: UUID(),
+                userID: userId,
+                categoryID: categoryService.getCategoryByName(name: "Social").id,
+                title: "Concert Tickets",
+                amount: 120.00,
+                transactionDate: Date().addingTimeInterval(-172800),
+                vendor: "Ticketmaster"),
+            Expense(
+                id: UUID(),
+                userID: userId,
+                categoryID: categoryService.getCategoryByName(name: "Food").id,
+                title: "WINGGSS",
+                amount: 220.00,
+                transactionDate: Date().addingTimeInterval(-872800),
+                vendor: "Wing Stop"),
+            Expense(
+                id: UUID(),
+                userID: userId,
+                categoryID: categoryService.getCategoryByName(name: "Groceries").id,
+                title: "Groceries",
+                amount: 50.00,
+                transactionDate: Date().addingTimeInterval(-972800),
+                vendor: "Kroger"),
+            Expense(
+                id: UUID(),
+                userID: userId,
+                categoryID: categoryService.getCategoryByName(name: "Dessert").id,
+                title: "Boba",
+                amount: 12.00,
+                transactionDate: Date().addingTimeInterval(-1200),
+                vendor: "Tiger Sugar"),
+            Expense(
+                id: UUID(),
+                userID: userId,
+                categoryID: categoryService.getCategoryByName(name: "Groceries").id,
+                title: "Costco Groceries",
+                amount: 87.00,
+                transactionDate: Date().addingTimeInterval(-172800 * 12.3),
+                vendor: "Costco"),
+            Expense(
+                id: UUID(),
+                userID: userId,
+                categoryID: categoryService.getCategoryByName(name: "Social").id,
+                title: "Hang Out with Friends",
+                amount: 37.00,
+                transactionDate: Date().addingTimeInterval(-172800 * 15.4),
+                vendor: "Volleyball"),
+            Expense(
+                id: UUID(),
+                userID: otherUsers[0].id,
+                categoryID: categoryService.getCategoryByName(name: "Food").id,
+                title: "Chiptole",
+                amount: 12.00,
+                transactionDate: Date().addingTimeInterval(-172800 * 14.4),
+                vendor: "Chiptole"),
+            Expense(
+                id: UUID(),
+                userID: userId,
+                categoryID: categoryService.getCategoryByName(name: "Food").id,
+                title: "Chiptole",
+                amount: 22.00,
+                transactionDate: Date().addingTimeInterval(-172800 * 14.4),
+                vendor: "Chi Cha")
         ]
         
         for expense in expenses {
@@ -148,11 +227,14 @@ class DebugService {
     }
     
     private func createDummyFixedExpenses(forUserID userId: UUID, categories: [Category]) async throws {
-        let fixedExpenses = [
+        
+        let categoryService = CategoryService()
+        
+        let fixedExpenses = try await [
             FixedExpense(
                 id: UUID(),
                 userID: userId,
-                categoryID: categories[0].id,
+                categoryID: categoryService.getCategoryByName(name: "Rent").id,
                 title: "Monthly Rent",
                 amount: 1500.00,
                 dueDate: Date().addingTimeInterval(86400),
@@ -162,17 +244,33 @@ class DebugService {
             FixedExpense(
                 id: UUID(),
                 userID: userId,
-                categoryID: categories[2].id,
+                categoryID: categoryService.getCategoryByName(name: "Internet").id,
                 title: "Internet Bill",
                 amount: 89.99,
                 dueDate: Date().addingTimeInterval(86400),
                 isRecurring: true,
                 recurrenceInterval: 1,
                 recurringUnit: "Months"),
-            FixedExpense(id: UUID(), userID: userId, categoryID: categories[4].id, title: "Car Insurance", amount: 450.00, dueDate: Date().addingTimeInterval(86400), isRecurring: true, recurrenceInterval: 3,
-                         recurringUnit: "Months"),
-            FixedExpense(id: UUID(), userID: userId, categoryID: categories[0].id, title: "Monthly Rent", amount: 1530.00, dueDate: Date().addingTimeInterval(-86400 * 20), isRecurring: true, recurrenceInterval: 1,
-                         recurringUnit: "Months")
+            FixedExpense(
+                id: UUID(),
+                userID: userId,
+                categoryID: categoryService.getCategoryByName(name: "Insurance").id,
+                title: "Car Insurance",
+                amount: 450.00,
+                dueDate: Date().addingTimeInterval(86400),
+                isRecurring: true,
+                recurrenceInterval: 3,
+                recurringUnit: "Months"),
+            FixedExpense(
+                id: UUID(),
+                userID: userId,
+                categoryID: categoryService.getCategoryByName(name: "Rent").id,
+                title: "Monthly Rent",
+                amount: 1530.00,
+                dueDate: Date().addingTimeInterval(-86400 * 20),
+                isRecurring: true,
+                recurrenceInterval: 1,
+                recurringUnit: "Months")
         ]
         
         for fixedExpense in fixedExpenses {
@@ -184,7 +282,7 @@ class DebugService {
         let incomes = [
             Income(id: UUID(), userID: userId, source: "Salary", description: "Monthly Salary", amount: 5000.00, transactionDate: Date()),
             Income(id: UUID(), userID: userId, source: "Freelance", description: "Web Development Project", amount: 1000.00, transactionDate: Date().addingTimeInterval(-86400 * 7)),
-            Income(id: UUID(), userID: userId, source: "Investment", description: "Dividend Payment", amount: 200.00, transactionDate: Date().addingTimeInterval(-86400 * 14))
+            Income(id: UUID(), userID: userId, source: "Investment", description: "Dividend Payment", amount: 200.00, transactionDate: Date().addingTimeInterval(-86400 * 20))
         ]
         
         for income in incomes {
@@ -197,8 +295,8 @@ class DebugService {
         let endOfMonth = Calendar.current.date(byAdding: DateComponents(month: 1, day: -1), to: startOfMonth)!
         
         let budgets = [
-            Budget(id: UUID(), userID: userId, categoryID: categories[0].id, title: "Grocery Budget", budgetAmount: 600.00, startDate: startOfMonth, endDate: endOfMonth),
-            Budget(id: UUID(), userID: userId, categoryID: categories[3].id, title: "Entertainment Budget", budgetAmount: 300.00, startDate: startOfMonth, endDate: endOfMonth)
+            Budget(id: UUID(), userID: userId, categoryID: categories[11].id, title: "Grocery Budget", budgetAmount: 600.00, startDate: startOfMonth, endDate: endOfMonth),
+            Budget(id: UUID(), userID: userId, categoryID: categories[10].id, title: "Entertainment Budget", budgetAmount: 300.00, startDate: startOfMonth, endDate: endOfMonth)
         ]
         
         for budget in budgets {
@@ -286,23 +384,32 @@ class DebugService {
         
         for splitExpense in splitExpenses {
             let createdSplitExpense = try await databaseService.createSplitExpense(splitExpense)
-            let amountPerPerson = splitExpense.totalAmount / 2.0 // Split between 2 people
+            let amountPerPerson = splitExpense.totalAmount
             
             if splitExpense.creatorID == userID {
                 // If user logged in is the payer that means the user logged in owes someone
-                let participant = SplitExpenseParticipant(
+                var participant = SplitExpenseParticipant(
                     splitID: createdSplitExpense.id,
                     userID: users[0].id,
-                    amountDue: amountPerPerson,
+                    amountDue: amountPerPerson / 3.0,
                     status: "Pending"
                 )
                 try await databaseService.createSplitExpenseParticipant(participant)
+                
+                participant = SplitExpenseParticipant(
+                    splitID: createdSplitExpense.id,
+                    userID: users[1].id,
+                    amountDue: amountPerPerson / 3.0,
+                    status: "Pending"
+                )
+                try await databaseService.createSplitExpenseParticipant(participant)
+                
             } else {
                 // Others paid, create participant for current user
                 let participant = SplitExpenseParticipant(
                     splitID: createdSplitExpense.id,
                     userID: userID,
-                    amountDue: amountPerPerson,
+                    amountDue: amountPerPerson / 2.0,
                     status: "Pending"
                 )
                 try await databaseService.createSplitExpenseParticipant(participant)

@@ -16,10 +16,10 @@ class UserService {
         return user
     }
     
-    func getUser(id: UUID) async throws -> User? {
+    func getUser(id: UUID) async throws -> User {
         let docRef = documentReference(for: id)
         let document = try await docRef.getDocument()
-        return try? document.data(as: User.self)
+        return try document.data(as: User.self)
     }
     
     func getAllUsers() async throws -> [User] {

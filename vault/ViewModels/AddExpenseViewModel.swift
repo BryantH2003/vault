@@ -126,7 +126,7 @@ class AddExpenseViewModel: ObservableObject {
         } else {
             filteredUsers = users.filter { user in
                 user.username.localizedCaseInsensitiveContains(searchQuery) ||
-                (user.fullName.localizedCaseInsensitiveContains(searchQuery) ?? false)
+                (user.fullName.localizedCaseInsensitiveContains(searchQuery))
             }
         }
     }
