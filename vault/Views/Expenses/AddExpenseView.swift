@@ -107,16 +107,12 @@ private struct RecurrenceSection: View {
     
     var body: some View {
         Section("Recurrence") {
-            Toggle("Recurring?", isOn: $viewModel.isRecurring)
+            Stepper("Every \(viewModel.recurrenceInterval) \(viewModel.recurrenceUnit.rawValue)\(viewModel.recurrenceInterval > 1 ? "s" : "")",
+                    value: $viewModel.recurrenceInterval, in: 1...365)
             
-            if viewModel.isRecurring {
-                Stepper("Every \(viewModel.recurrenceInterval) \(viewModel.recurrenceUnit.rawValue)\(viewModel.recurrenceInterval > 1 ? "s" : "")",
-                        value: $viewModel.recurrenceInterval, in: 1...365)
-                
-                Picker("Recurrence Unit", selection: $viewModel.recurrenceUnit) {
-                    ForEach(AddExpenseViewModel.RecurrenceUnit.allCases, id: \.self) { unit in
-                        Text(unit.rawValue + "s").tag(unit)
-                    }
+            Picker("Recurrence Unit", selection: $viewModel.recurrenceUnit) {
+                ForEach(AddExpenseViewModel.RecurrenceUnit.allCases, id: \.self) { unit in
+                    Text(unit.rawValue + "s").tag(unit)
                 }
             }
         }
@@ -146,16 +142,6 @@ private struct CategorySection: View {
                     }
                 }
             }
-        }
-    }
-}
-
-private struct SplitToggleSection: View {
-    @ObservedObject var viewModel: AddExpenseViewModel
-    
-    var body: some View {
-        Section {
-            Toggle("Split with Friends", isOn: $viewModel.isSplitExpense)
         }
     }
 }

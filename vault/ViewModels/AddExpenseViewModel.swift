@@ -29,7 +29,6 @@ class AddExpenseViewModel: ObservableObject {
     // Fixed expense properties
     @Published var recurrenceInterval: Int = 1
     @Published var recurrenceUnit: RecurrenceUnit = .month
-    @Published var isRecurring: Bool = true
     
     // Split payment properties
     @Published var isSplitExpense = false
@@ -156,41 +155,41 @@ class AddExpenseViewModel: ObservableObject {
                     title: title,
                     amount: amount,
                     dueDate: date,
-                    transactionDate: Date(),
-                    isRecurring: isRecurring,
                     recurrenceInterval: recurrenceInterval,
                     recurringUnit: recurrenceUnit.rawValue.lowercased()
                 )
                 _ = try await fixedExpenseService.createFixedExpense(fixedExpense)
                 
             case .shared:
-                // Calculate amount per person (including the creator)
-                let totalParticipants = selectedParticipants.count + 1
-                let amountPerPerson = amount / Double(totalParticipants)
-                
                 let expense = Expense(
                     userID: userID,
                     categoryID: categoryID,
                     title: title,
-                    amount: amountPerPerson,
+                    amount: amount,
                     transactionDate: date,
                     vendor: vendor.isEmpty ? nil : vendor
                 )
                 
                 let savedExpense = try await expenseService.createExpense(expense)
                 
+                for participant in selectedParticipants {
+                    
+                }
+                // Create split expense
+                let splitExpense = SplitExpense(
+                    expenseDescription: title,
+                    totalAmount: amount,
+                    creatorID: userID
+                )
+                
+                let savedSplitExpense = try await splitExpenseService.createSplitExpense(splitExpense)
+                
+                // Calculate amount per person (including the creator)
+                let totalParticipants = selectedParticipants.count + 1
+                let amountPerPerson = amount / Double(totalParticipants)
+                
                 // Create participants (including the creator)
                 for participantID in selectedParticipants {
-                    // Create split expense
-                    let splitExpense = SplitExpense(
-                        expenseDescription: title,
-                        totalAmount: amount,
-                        payerID: participantID,
-                        creatorID: userID
-                    )
-                    
-                    let savedSplitExpense = try await splitExpenseService.createSplitExpense(splitExpense)
-                    
                     let participant = SplitExpenseParticipant(
                         splitID: savedSplitExpense.id,
                         userID: participantID,
@@ -199,6 +198,15 @@ class AddExpenseViewModel: ObservableObject {
                     )
                     try await splitExpenseParticipantService.createParticipant(participant)
                 }
+                
+                // Add creator as a participant
+                let creatorParticipant = SplitExpenseParticipant(
+                    splitID: savedSplitExpense.id,
+                    userID: userID,
+                    amountDue: amountPerPerson,
+                    status: SplitExpenseParticipant.PaymentStatus.paid.rawValue
+                )
+                try await splitExpenseParticipantService.createParticipant(creatorParticipant)
             }
             
             return true

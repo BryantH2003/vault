@@ -57,8 +57,12 @@ class DebugService {
         let categories = try await createDummyCategories()
         print("Created \(categories.count) categories")
         
+        // Create additional users (excluding the current user)
+        let additionalUsers = try await createDummyUsers()
+        print("Created \(additionalUsers.count) additional users")
+        
         // Create expenses for the current user
-        try await createDummyExpenses(forUserID: userID, categories: categories)
+        try await createDummyExpenses(forUserID: userID, categories: categories, otherUsers: additionalUsers)
         print("Created expenses")
         
         try await createDummyFixedExpenses(forUserID: userID, categories: categories)
@@ -72,10 +76,6 @@ class DebugService {
         
         try await createDummySavingsGoals(forUserID: userID)
         print("Created saving goals")
-        
-        // Create additional users (excluding the current user)
-        let additionalUsers = try await createDummyUsers()
-        print("Created \(additionalUsers.count) additional users")
         
         // Create friendships between current user and dummy users
         try await createDummyFriendships(forUserID: userID, withUsers: additionalUsers)
@@ -129,7 +129,7 @@ class DebugService {
         }
     }
     
-    private func createDummyExpenses(forUserID userId: UUID, categories: [Category]) async throws {
+    private func createDummyExpenses(forUserID userId: UUID, categories: [Category], otherUsers: [User]) async throws {
         let expenses = [
             Expense(id: UUID(), userID: userId, categoryID: categories[7].id, title: "Weekly Groceries", amount: 150.00, transactionDate: Date(), vendor: "Whole Foods"),
             Expense(id: UUID(), userID: userId, categoryID: categories[11].id, title: "Movie Night", amount: 30.00, transactionDate: Date().addingTimeInterval(-86400), vendor: "AMC"),
@@ -139,6 +139,7 @@ class DebugService {
             Expense(id: UUID(), userID: userId, categoryID: categories[6].id, title: "Boba", amount: 12.00, transactionDate: Date().addingTimeInterval(-1200), vendor: "Tiger Sugar"),
             Expense(id: UUID(), userID: userId, categoryID: categories[7].id, title: "Costco Groceries", amount: 87.00, transactionDate: Date().addingTimeInterval(-172800 * 7.3), vendor: "Costco"),
             Expense(id: UUID(), userID: userId, categoryID: categories[12].id, title: "Hang Out with Friends", amount: 37.00, transactionDate: Date().addingTimeInterval(-172800 * 7.4), vendor: "Costco"),
+            Expense(id: UUID(), userID: otherUsers[0].id, categoryID: categories[5].id, title: "Chiptole", amount: 12.00, transactionDate: Date().addingTimeInterval(-172800 * 7.4), vendor: "Chiptole")
         ]
         
         for expense in expenses {
@@ -256,14 +257,12 @@ class DebugService {
             SplitExpense(
                 expenseDescription: "Dinner at Italian Restaurant",
                 totalAmount: 150.00,
-                payerID: userID,
                 creatorID: users[0].id,
                 creationDate: Date()
             ),
             SplitExpense(
                 expenseDescription: "Groceries for Party",
                 totalAmount: 200.00,
-                payerID: users[1].id,
                 creatorID: userID,
                 creationDate: Date().addingTimeInterval(-172800)
             ),
@@ -272,14 +271,12 @@ class DebugService {
             SplitExpense(
                 expenseDescription: "Movie Night",
                 totalAmount: 90.00,
-                payerID: users[0].id,
                 creatorID: userID,
                 creationDate: Date().addingTimeInterval(-86400)
             ),
             SplitExpense(
                 expenseDescription: "Concert Tickets",
                 totalAmount: 300.00,
-                payerID: userID,
                 creatorID: users[1].id,
                 creationDate: Date().addingTimeInterval(-259200)
             )
@@ -291,11 +288,11 @@ class DebugService {
             let createdSplitExpense = try await databaseService.createSplitExpense(splitExpense)
             let amountPerPerson = splitExpense.totalAmount / 2.0 // Split between 2 people
             
-            if splitExpense.payerID == userID {
+            if splitExpense.creatorID == userID {
                 // If user logged in is the payer that means the user logged in owes someone
                 let participant = SplitExpenseParticipant(
                     splitID: createdSplitExpense.id,
-                    userID: userID,
+                    userID: users[0].id,
                     amountDue: amountPerPerson,
                     status: "Pending"
                 )
@@ -304,7 +301,7 @@ class DebugService {
                 // Others paid, create participant for current user
                 let participant = SplitExpenseParticipant(
                     splitID: createdSplitExpense.id,
-                    userID: createdSplitExpense.payerID,
+                    userID: userID,
                     amountDue: amountPerPerson,
                     status: "Pending"
                 )
@@ -348,6 +345,7 @@ class DebugService {
                 monthlyIncome: 6000,
                 monthlySavingsGoal: 1500,
                 monthlySpendingLimit: 3000,
+                userStatus: nil,
                 createdAt: Date(),
                 updatedAt: Date()
             ),
@@ -361,6 +359,7 @@ class DebugService {
                 monthlyIncome: 7000,
                 monthlySavingsGoal: 2000,
                 monthlySpendingLimit: 3500,
+                userStatus: "Going broke",
                 createdAt: Date(),
                 updatedAt: Date()
             ),
@@ -374,6 +373,7 @@ class DebugService {
                 monthlyIncome: 5500,
                 monthlySavingsGoal: 1200,
                 monthlySpendingLimit: 2800,
+                userStatus: "Need more cash",
                 createdAt: Date(),
                 updatedAt: Date()
             ),
@@ -387,6 +387,7 @@ class DebugService {
                 monthlyIncome: 6500,
                 monthlySavingsGoal: 1800,
                 monthlySpendingLimit: 3200,
+                userStatus: nil,
                 createdAt: Date(),
                 updatedAt: Date()
             )

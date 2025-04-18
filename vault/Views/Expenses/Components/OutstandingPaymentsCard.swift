@@ -20,8 +20,7 @@ struct OutstandingPaymentsCard: View {
                 if !outstandingPayments.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Bills & Recurring Payments")
-                            .figtreeFont(.medium, size: 16)
-                            .foregroundColor(.primary)
+                            .cardTitleStyle()
                         
                         ForEach(outstandingPayments.sorted { $0.dueDate < $1.dueDate }) { payment in
                             OutstandingPaymentRow(
@@ -35,7 +34,6 @@ struct OutstandingPaymentsCard: View {
                         }
                     }
                 }
-                
             }
         }
         .padding()
@@ -91,66 +89,6 @@ private struct OutstandingPaymentRow: View {
                         .padding(.vertical, 2)
                         .background(Color.red)
                         .cornerRadius(4)
-                }
-            }
-        }
-    }
-}
-
-private struct SplitExpenseRow: View {
-    let expense: SplitExpense
-    let participants: [SplitExpenseParticipant]
-    let users: [UUID: User]
-    
-    private var totalOwed: Double {
-        participants.reduce(0) { $0 + $1.amountDue }
-    }
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(expense.expenseDescription)
-                        .figtreeFont(.medium, size: 14)
-                    
-                    if let payer = users[expense.payerID] {
-                        Text("Paid by \(payer.username)")
-                            .figtreeFont(.regular, size: 12)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                
-                Spacer()
-                
-                VStack(alignment: .trailing, spacing: 4) {
-                    Text(totalOwed, format: .currency(code: "USD"))
-                        .figtreeFont(.semibold, size: 14)
-                    
-                    Text(expense.creationDate, style: .date)
-                        .figtreeFont(.regular, size: 12)
-                        .foregroundColor(.secondary)
-                }
-            }
-            
-            // Participants
-            if !participants.isEmpty {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Participants:")
-                        .figtreeFont(.regular, size: 12)
-                        .foregroundColor(.secondary)
-                    
-                    ForEach(participants) { participant in
-                        if let user = users[participant.userID] {
-                            HStack {
-                                Text(user.username)
-                                    .figtreeFont(.regular, size: 12)
-                                Spacer()
-                                Text(participant.amountDue, format: .currency(code: "USD"))
-                                    .figtreeFont(.regular, size: 12)
-                                    .foregroundColor(.orange)
-                            }
-                        }
-                    }
                 }
             }
         }

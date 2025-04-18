@@ -31,7 +31,7 @@ class SplitExpenseParticipantService {
     
     func getParticipants(forExpenseID: UUID) async throws -> [SplitExpenseParticipant] {
         let snapshot = try await db.collection("splitExpenseParticipants")
-            .whereField("expenseID", isEqualTo: forExpenseID.uuidString)
+            .whereField("splitID", isEqualTo: forExpenseID.uuidString)
             .getDocuments()
         return try snapshot.documents.compactMap { try $0.data(as: SplitExpenseParticipant.self) }
     }

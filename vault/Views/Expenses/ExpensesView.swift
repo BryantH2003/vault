@@ -37,23 +37,26 @@ struct ExpensesView: View {
                     .padding(.vertical, 8)
                 }
                 
-                HStack(alignment: .center ,spacing: 24) {
-                    ForEach([ExpensesTab.overview, .outstandingPayments, .myExpenses, .mySavings], id: \.title) { tab in
-                        Button(action: { selectedTab = tab }) {
-                            VStack(spacing: 8) {
-                                Text(tab.title)
-                                    .foregroundColor(selectedTab == tab ? .primary : .secondary)
+                // Navigation tabs
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 24) {
+                        ForEach([ExpensesTab.overview, .outstandingPayments, .myExpenses, .mySavings], id: \.title) { tab in
+                            Button(action: { selectedTab = tab }) {
+                                VStack(spacing: 8) {
+                                    Text(tab.title)
+                                        .foregroundColor(selectedTab == tab ? .primary : .secondary)
                                         .fontWeight(selectedTab == tab ? .semibold : .regular)
                                     
-                                Rectangle()
-                                    .fill(selectedTab == tab ? Color.primary : Color.clear)
-                                    .frame(height: 2)
+                                    Rectangle()
+                                        .fill(selectedTab == tab ? Color.primary : Color.clear)
+                                        .frame(height: 2)
+                                }
                             }
                         }
                     }
-                }
                     .padding(.horizontal)
-                    .frame(maxWidth: .infinity)
+                }
+                .padding(.bottom, 8)
                 
                 if viewModel.isLoading {
                     ProgressView()
@@ -147,11 +150,9 @@ private struct OutstandingPaymentsTabView: View {
             }
             
             if !viewModel.splitExpensesYouOweList.isEmpty || !viewModel.splitExpensesOwedToYouList.isEmpty {
-                SplitExpensesOverviewCard(
-                    expensesYouOwe: viewModel.splitExpensesYouOweList,
-                    expensesOwedToYou: viewModel.splitExpensesOwedToYouList,
-                    participants: viewModel.splitParticipants,
-                    users: viewModel.users,
+                SplitExpensesSection(
+                    splitExpenses: viewModel.splitExpensesList,
+                    isLoading: viewModel.isLoadingPayments,
                     currentUserID: userID
                 )
                 .cardBackground()
@@ -217,4 +218,4 @@ private struct ErrorView: View {
         .cornerRadius(12)
         .shadow(radius: 2)
     }
-} 
+}
