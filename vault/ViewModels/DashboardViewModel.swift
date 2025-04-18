@@ -25,11 +25,7 @@ class DashboardViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var isLoadingPayments = false
     @Published var error: Error?
-    @Published var selectedDate: Date = Date() {
-        didSet {
-            print("Selected date changed to: \(Date.monthYearString(from: selectedDate))")
-        }
-    }
+    @Published var selectedDate: Date = Date()
     
     private let expenseService = ExpenseService.shared
     private let incomeService = IncomeService.shared
@@ -154,7 +150,7 @@ class DashboardViewModel: ObservableObject {
             previousMonthExpensesTotal = previousExpensesList.reduce(0) { $0 + $1.amount }
             
             // Load previous month expenses
-            let prevFixedExpensesList = try await fixedExpenseService.getFixedExpensesDateRange(forUserID: userID, in: startDate...endDate)
+            let prevFixedExpensesList = try await fixedExpenseService.getFixedExpensesDateRange(forUserID: userID, in: previousStartDate...previousEndDate)
             
             previousMonthExpensesTotal = prevFixedExpensesList.reduce(0) { $0 + $1.amount }
 
