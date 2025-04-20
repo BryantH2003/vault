@@ -88,8 +88,8 @@ class DebugService {
         print("Created friendships")
         
         // Create split expenses between current user and all dummy users
-        try await createDummySplitExpenses(forUserID: userID, between: additionalUsers)
-        print("Created split expenses")
+//        try await createDummySplitExpenses(forUserID: userID, between: additionalUsers)
+//        print("Created split expenses")
         
         // Create vendors
         try await createDummyVendors(categoryIDs: categories.map { $0.id })
@@ -344,81 +344,81 @@ class DebugService {
         }
     }
     
-    private func createDummySplitExpenses(forUserID userID: UUID, between users: [User]) async throws {
-        guard users.count >= 2 else {
-            print("Need at least 2 users to create split expenses")
-            return
-        }
-        
-        let splitExpenses = [
-            // Expenses where current user is the payer
-            SplitExpense(
-                expenseDescription: "Dinner at Italian Restaurant",
-                totalAmount: 150.00,
-                creatorID: users[0].id,
-                creationDate: Date()
-            ),
-            SplitExpense(
-                expenseDescription: "Groceries for Party",
-                totalAmount: 200.00,
-                creatorID: userID,
-                creationDate: Date().addingTimeInterval(-172800)
-            ),
-            
-            // Expenses where current user owes others
-            SplitExpense(
-                expenseDescription: "Movie Night",
-                totalAmount: 90.00,
-                creatorID: userID,
-                creationDate: Date().addingTimeInterval(-86400)
-            ),
-            SplitExpense(
-                expenseDescription: "Concert Tickets",
-                totalAmount: 300.00,
-                creatorID: users[1].id,
-                creationDate: Date().addingTimeInterval(-259200)
-            )
-        ]
-        
-        print("Creating \(splitExpenses.count) split expenses...")
-        
-        for splitExpense in splitExpenses {
-            let createdSplitExpense = try await databaseService.createSplitExpense(splitExpense)
-            let amountPerPerson = splitExpense.totalAmount
-            
-            if splitExpense.creatorID == userID {
-                // If user logged in is the payer that means the user logged in owes someone
-                var participant = SplitExpenseParticipant(
-                    splitID: createdSplitExpense.id,
-                    userID: users[0].id,
-                    amountDue: amountPerPerson / 3.0,
-                    status: "Pending"
-                )
-                try await databaseService.createSplitExpenseParticipant(participant)
-                
-                participant = SplitExpenseParticipant(
-                    splitID: createdSplitExpense.id,
-                    userID: users[1].id,
-                    amountDue: amountPerPerson / 3.0,
-                    status: "Pending"
-                )
-                try await databaseService.createSplitExpenseParticipant(participant)
-                
-            } else {
-                // Others paid, create participant for current user
-                let participant = SplitExpenseParticipant(
-                    splitID: createdSplitExpense.id,
-                    userID: userID,
-                    amountDue: amountPerPerson / 2.0,
-                    status: "Pending"
-                )
-                try await databaseService.createSplitExpenseParticipant(participant)
-            }
-            
-            print("Created split expense: \(splitExpense.expenseDescription) with participant")
-        }
-        print("Finished creating split expenses")
-    }
+//    private func createDummySplitExpenses(forUserID userID: UUID, between users: [User]) async throws {
+//        guard users.count >= 2 else {
+//            print("Need at least 2 users to create split expenses")
+//            return
+//        }
+//        
+//        let splitExpenses = [
+//            // Expenses where current user is the payer
+//            SplitExpense(
+//                expenseDescription: "Dinner at Italian Restaurant",
+//                totalAmount: 150.00,
+//                creatorID: users[0].id,
+//                creationDate: Date()
+//            ),
+//            SplitExpense(
+//                expenseDescription: "Groceries for Party",
+//                totalAmount: 200.00,
+//                creatorID: userID,
+//                creationDate: Date().addingTimeInterval(-172800)
+//            ),
+//            
+//            // Expenses where current user owes others
+//            SplitExpense(
+//                expenseDescription: "Movie Night",
+//                totalAmount: 90.00,
+//                creatorID: userID,
+//                creationDate: Date().addingTimeInterval(-86400)
+//            ),
+//            SplitExpense(
+//                expenseDescription: "Concert Tickets",
+//                totalAmount: 300.00,
+//                creatorID: users[1].id,
+//                creationDate: Date().addingTimeInterval(-259200)
+//            )
+//        ]
+//        
+//        print("Creating \(splitExpenses.count) split expenses...")
+//        
+//        for splitExpense in splitExpenses {
+//            let createdSplitExpense = try await databaseService.createSplitExpense(splitExpense)
+//            let amountPerPerson = splitExpense.totalAmount
+//            
+//            if splitExpense.creatorID == userID {
+//                // If user logged in is the payer that means the user logged in owes someone
+//                var participant = SplitExpenseParticipant(
+//                    splitID: createdSplitExpense.id,
+//                    userID: users[0].id,
+//                    amountDue: amountPerPerson / 3.0,
+//                    status: "Pending"
+//                )
+//                try await databaseService.createSplitExpenseParticipant(participant)
+//                
+//                participant = SplitExpenseParticipant(
+//                    splitID: createdSplitExpense.id,
+//                    userID: users[1].id,
+//                    amountDue: amountPerPerson / 3.0,
+//                    status: "Pending"
+//                )
+//                try await databaseService.createSplitExpenseParticipant(participant)
+//                
+//            } else {
+//                // Others paid, create participant for current user
+//                let participant = SplitExpenseParticipant(
+//                    splitID: createdSplitExpense.id,
+//                    userID: userID,
+//                    amountDue: amountPerPerson / 2.0,
+//                    status: "Pending"
+//                )
+//                try await databaseService.createSplitExpenseParticipant(participant)
+//            }
+//            
+//            print("Created split expense: \(splitExpense.expenseDescription) with participant")
+//        }
+//        print("Finished creating split expenses")
+//    }
     
     // MARK: - Create Dummy Vendors
     private func createDummyVendors(categoryIDs: [UUID]) async throws {

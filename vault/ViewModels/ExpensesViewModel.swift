@@ -17,6 +17,7 @@ class ExpensesViewModel: ObservableObject {
     @Published var splitExpensesYouOweList: [SplitExpense] = []
     @Published var splitExpensesOwedToYouList: [SplitExpense] = []
     @Published var splitExpensesList: [(expense: SplitExpense, participants: [SplitExpenseParticipant])] = []
+    @Published var splitIDList: [UUID] = []
     
     @Published var isLoadingPayments = false
     @Published var splitParticipants: [UUID: [SplitExpenseParticipant]] = [:]
@@ -188,18 +189,21 @@ class ExpensesViewModel: ObservableObject {
                 let participants = try await splitExpenseParticipantService.getParticipants(forExpenseID: expense.id)
                 var relevantParticipant: [SplitExpenseParticipant] = []
                 
+                splitIDList.append(expense.expenseID)
+                
                 // If you are the creator of the split expense
                 if expense.creatorID == userID {
                     
                     for participant in participants {
                         relevantParticipant.append(participant)
                     }
-        
+                    
                 } else {
                     // If someone else is creator, get current user's participant status
                     for participant in participants {
                         
                         if participant.userID == userID {
+                            
                             relevantParticipant.append(participant)
                             break
                         }

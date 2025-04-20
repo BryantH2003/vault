@@ -13,12 +13,13 @@ struct SplitExpensesSection: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            ForEach(splitExpenses, id: \.expense.id) { expenseData in
-                SplitExpenseRow(
-                    splitExpense: expenseData.expense,
-                    participants: expenseData.participants,
-                    currentUserID: currentUserID
-                )
+            ForEach(splitExpenses.indices, id: \.self) { index in
+                let expenseData = splitExpenses[index]
+                    SplitExpenseRow(
+                        splitExpense: expenseData.expense,
+                        participants: expenseData.participants,
+                        currentUserID: currentUserID
+                    )
             }
         }
     }

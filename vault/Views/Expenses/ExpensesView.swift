@@ -9,9 +9,9 @@ private enum ExpensesTab {
     var title: String {
         switch self {
         case .overview: return "Overview"
+        case .myExpenses: return "Expenses"
         case .outstandingPayments: return "Outstanding"
-        case .myExpenses: return "My Expenses"
-        case .mySavings: return "My Savings"
+        case .mySavings: return "Savings"
         }
     }
 }
@@ -67,10 +67,10 @@ struct ExpensesView: View {
                     switch selectedTab {
                     case .overview:
                         OverviewTabView(viewModel: viewModel)
-                    case .outstandingPayments:
-                        OutstandingPaymentsTabView(viewModel: viewModel, userID: userID)
                     case .myExpenses:
                         MyExpensesTabView(viewModel: viewModel)
+                    case .outstandingPayments:
+                        OutstandingPaymentsTabView(viewModel: viewModel, userID: userID)
                     case .mySavings:
                         MySavingsTabView(viewModel: viewModel)
                     }
@@ -177,7 +177,8 @@ private struct MyExpensesTabView: View {
             
             RecentTransactionsCard(
                 expenses: viewModel.recentExpensesList,
-                categories: viewModel.categories
+                categories: viewModel.categories,
+                splitIDList: viewModel.splitIDList
             )
             .cardBackground()
         }

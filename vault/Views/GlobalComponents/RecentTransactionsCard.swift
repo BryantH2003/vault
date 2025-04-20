@@ -3,6 +3,7 @@ import SwiftUI
 struct RecentTransactionsCard: View {
     let expenses: [Expense]
     let categories: [UUID: Category]
+    let splitIDList: [UUID]
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -20,7 +21,8 @@ struct RecentTransactionsCard: View {
                     ForEach(expenses) { expense in
                         TransactionRow(
                             expense: expense,
-                            category: categories[expense.categoryID]
+                            category: categories[expense.categoryID],
+                            isSplitExpense: splitIDList.contains(expense.id)
                         )
                         
                         if expense.id != expenses.last?.id {
@@ -41,6 +43,7 @@ struct RecentTransactionsCard: View {
 private struct TransactionRow: View {
     let expense: Expense
     let category: Category?
+    let isSplitExpense: Bool
     
     var body: some View {
         HStack(spacing: 12) {
@@ -73,6 +76,10 @@ private struct TransactionRow: View {
                         Text(vendor)
                             .secondaryTitleStyle()
                     }
+                }
+                
+                if isSplitExpense {
+                    Text("Split")
                 }
             }
             

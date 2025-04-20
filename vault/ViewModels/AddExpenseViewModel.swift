@@ -161,11 +161,16 @@ class AddExpenseViewModel: ObservableObject {
                 _ = try await fixedExpenseService.createFixedExpense(fixedExpense)
                 
             case .shared:
+                
+                // Calculate amount per person
+                let totalParticipants = selectedParticipants.count
+                let amountPerPerson = amount / Double(totalParticipants + 1)
+                
                 let expense = Expense(
                     userID: userID,
                     categoryID: categoryID,
                     title: title,
-                    amount: amount,
+                    amount: amountPerPerson,
                     transactionDate: date,
                     vendor: vendor.isEmpty ? nil : vendor
                 )
@@ -174,16 +179,14 @@ class AddExpenseViewModel: ObservableObject {
                 
                 // Create split expense
                 let splitExpense = SplitExpense(
+                    expenseID: savedExpense.id,
                     expenseDescription: title,
                     totalAmount: amount,
-                    creatorID: userID
+                    creatorID: userID,
+                    creationDate: date
                 )
                 
                 let savedSplitExpense = try await splitExpenseService.createSplitExpense(splitExpense)
-                
-                // Calculate amount per person (including the creator)
-                let totalParticipants = selectedParticipants.count + 1
-                let amountPerPerson = amount / Double(totalParticipants)
                 
                 // Create participants (including the creator)
                 for participantID in selectedParticipants {
@@ -196,14 +199,6 @@ class AddExpenseViewModel: ObservableObject {
                     try await splitExpenseParticipantService.createParticipant(participant)
                 }
                 
-                // Add creator as a participant
-                let creatorParticipant = SplitExpenseParticipant(
-                    splitID: savedSplitExpense.id,
-                    userID: userID,
-                    amountDue: amountPerPerson,
-                    status: SplitExpenseParticipant.PaymentStatus.paid.rawValue
-                )
-                try await splitExpenseParticipantService.createParticipant(creatorParticipant)
             }
             
             return true

@@ -50,7 +50,8 @@ struct DashboardView: View {
                     
                     RecentTransactionsCard(
                         expenses: viewModel.recentExpensesList,
-                        categories: viewModel.categories
+                        categories: viewModel.categories,
+                        splitIDList: viewModel.splitIDList
                     )
                     .cardBackground()
                 }
