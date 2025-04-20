@@ -87,12 +87,7 @@ private struct SplitExpenseRow: View {
                         .cardRowAmountStyle()
                     
                     Text(participants[0].status.capitalized)
-                        .font(.caption)
-                        .foregroundColor(statusColor(for: participants[0].status))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(statusColor(for: participants[0].status).opacity(0.2))
-                        .cornerRadius(8)
+                        .splitExpenseStatusTagsStyle(status: participants[0].status)
                     
                 } else {
                     
@@ -101,31 +96,12 @@ private struct SplitExpenseRow: View {
                     
                     if getParticipantsPaymentStatusPending() > 0 {
                         Text("Pending \(getParticipantsPaymentStatusPaid())/\(participants.count)")
-                            .font(.caption)
-                            .foregroundColor(.orange)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(.orange.opacity(0.2))
-                            .cornerRadius(8)
+                            .splitExpenseStatusTagsStyle(status: "pending")
                     } else {
                         Text("Paid")
-                            .font(.caption)
-                            .foregroundColor(.green)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(.green.opacity(0.2))
-                            .cornerRadius(8)
+                            .splitExpenseStatusTagsStyle(status: "paid")
                     }
                 }
-                
-                
-//                Text(participant.status.capitalized)
-//                    .font(.caption)
-//                    .foregroundColor(statusColor(for: participant.status))
-//                    .padding(.horizontal, 8)
-//                    .padding(.vertical, 4)
-//                    .background(statusColor(for: participant.status).opacity(0.2))
-//                    .cornerRadius(8)
             }
         }
         .padding(.vertical, 8)

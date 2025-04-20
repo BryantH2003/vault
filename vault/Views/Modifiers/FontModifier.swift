@@ -80,6 +80,55 @@ struct FriendDetailPaidByTagStyle: ViewModifier {
     }
 }
 
+struct SplitExpenseStatusTagsStyle: ViewModifier {
+    var status: String
+    
+    private func statusColor(for status: String) -> Color {
+        switch status.lowercased() {
+        case "pending":
+            return .orange
+        case "paid":
+            return .green
+        case "declined":
+            return .red
+        default:
+            return .gray
+        }
+    }
+    
+    func body(content: Content) -> some View {
+        content
+            .figtreeFont(.regular, size: 14)
+            .foregroundColor(statusColor(for: status))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(statusColor(for: status).opacity(0.2))
+            .cornerRadius(8)
+    }
+}
+
+struct ExpenseTypeTagStyle: ViewModifier {
+    var expenseType: String
+    
+    private func expenseTypeColor(for expenseType: String) -> Color {
+        switch expenseType.lowercased() {
+        case "split":
+            return .blue
+        default:
+            return .gray
+        }
+    }
+    func body(content: Content) -> some View {
+        content
+            .figtreeFont(.regular, size: 14)
+            .foregroundColor(expenseTypeColor(for: expenseType))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 2)
+            .background(expenseTypeColor(for: expenseType).opacity(0.2))
+            .cornerRadius(8)
+    }
+}
+
 extension View {
     func figtreeFont(_ font: FigtreeFont, size: CGFloat) -> some View {
         modifier(FigtreeTextStyle(font: font, size: size))
@@ -107,5 +156,13 @@ extension View {
     
     func friendDetailPaidByTagStyle(textColor: Color) -> some View {
         modifier(FriendDetailPaidByTagStyle(textColor: textColor))
+    }
+    
+    func splitExpenseStatusTagsStyle(status: String) -> some View {
+        modifier(SplitExpenseStatusTagsStyle(status: status))
+    }
+    
+    func expenseTypeTagStyle(expenseType: String) -> some View {
+        modifier(ExpenseTypeTagStyle(expenseType: expenseType))
     }
 }

@@ -42,11 +42,13 @@ struct FriendsView: View {
             } else {
                 // Friends list
                 ScrollView {
-                    VStack (spacing: 16){
+                    VStack (spacing: 8){
                         if viewModel.isLoading {
                             ProgressView()
                                 .frame(maxWidth: .infinity, alignment: .center)
                         } else if viewModel.friends.isEmpty {
+                            
+                            // TODO: Add "Lets Add Friends" Button
                             Text("No friends yet")
                                 .foregroundColor(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .center)
@@ -160,7 +162,7 @@ struct FriendRow: View {
                 VStack(alignment: .trailing) {
                     if (friend.userStatus != nil) {
                         Text(friend.userStatus ?? "No user status")
-                            .cardTitleStyle()
+                            .cardRowTitleStyle()
                     } else {
                         Text("No user status")
                             .secondaryTitleStyle()

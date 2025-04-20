@@ -330,6 +330,15 @@ class DebugService {
             try await databaseService.createFriendship(friendship1)
             print("Created friendship between current user and \(firstUser.username)")
             
+            let friendship2 = Friendship(
+                user1ID: userID,
+                user2ID: users[1].id,
+                status: "Accepted",
+                actionUserID: userID
+            )
+            try await databaseService.createFriendship(friendship2)
+            print("Created friendship between current user and \(users[1].username)")
+            
             // If there's a second user, create a pending friend request
             if users.count >= 2 {
                 let friendship2 = Friendship(

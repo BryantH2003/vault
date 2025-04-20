@@ -80,6 +80,7 @@ private struct TransactionRow: View {
                 
                 if isSplitExpense {
                     Text("Split")
+                        .expenseTypeTagStyle(expenseType: "split")
                 }
             }
             
