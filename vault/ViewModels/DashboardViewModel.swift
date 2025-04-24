@@ -157,7 +157,7 @@ class DashboardViewModel: ObservableObject {
             // Load previous month expenses
             let prevFixedExpensesList = try await fixedExpenseService.getFixedExpensesDateRange(forUserID: userID, in: previousStartDate...previousEndDate)
             
-            previousMonthExpensesTotal = prevFixedExpensesList.reduce(0) { $0 + $1.amount }
+            previousMonthExpensesTotal += prevFixedExpensesList.reduce(0) { $0 + $1.amount }
 
     // --------------------------------------------------------------
 

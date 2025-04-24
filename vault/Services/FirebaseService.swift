@@ -408,7 +408,7 @@ class FirebaseService: DatabaseService {
         return try await VendorService.shared.getAllVendors()
     }
     
-    func updateVendor(_ vendor: Vendor) async throws -> Vendor {
+    func updateVendor(_ vendor: Vendor) async throws -> Vendor{
         return try await VendorService.shared.updateVendor(vendor)
     }
     

@@ -1,74 +1,72 @@
 import Foundation
 
 struct MonthlyOverview: Identifiable, Codable {
-    let id: String
-    let spent: Double
-    let previousSpent: Double
-    let saved: Double
-    let previousSaved: Double
-    let month: Int
+    let id: UUID
+    let userID: UUID
     let year: Int
-    let userId: String
+    let month: Int
+    let totalIncome: Double
+    let totalExpenses: Double
+    let netSavings: Double
     
     var uniqueKey: String {
-        "\(userId)_\(year)_\(month)"
+        "\(userID)_\(year)_\(month)"
     }
     
-    init(id: String = UUID().uuidString,
-         spent: Double,
-         previousSpent: Double,
-         saved: Double,
-         previousSaved: Double,
-         month: Int,
-         year: Int,
-         userId: String) {
+    init(id: UUID = UUID(),
+        userID: UUID = UUID(),
+        year: Int,
+        month: Int,
+        totalIncome: Double,
+        totalExpenses: Double,
+        netSavings: Double
+        ) {
         self.id = id
-        self.spent = spent
-        self.previousSpent = previousSpent
-        self.saved = saved
-        self.previousSaved = previousSaved
-        self.month = month
+        self.userID = userID
         self.year = year
-        self.userId = userId
+        self.month = month
+        self.totalIncome = totalIncome
+        self.totalExpenses = totalExpenses
+        self.netSavings = netSavings
+        
+        
     }
 }
 
 // MARK: - Firestore Conversion
 extension MonthlyOverview {
-    init?(from dictionary: [String: Any], id: String) {
+    init?(from dictionary: [String: Any], id: UUID) {
         guard
-            let spent = dictionary["spent"] as? Double,
-            let previousSpent = dictionary["previousSpent"] as? Double,
-            let saved = dictionary["saved"] as? Double,
-            let previousSaved = dictionary["previousSaved"] as? Double,
-            let month = dictionary["month"] as? Int,
+            let userIdString = dictionary["userId"] as? String,
+            let userID = UUID(uuidString: userIdString),
             let year = dictionary["year"] as? Int,
-            let userId = dictionary["userId"] as? String
+            let month = dictionary["month"] as? Int,
+            let totalIncome = dictionary["totalIncome"] as? Double,
+            let totalExpenses = dictionary["totalExpenses"] as? Double,
+            let netSavings = dictionary["netSavings"] as? Double
         else {
             return nil
         }
         
         self.init(
             id: id,
-            spent: spent,
-            previousSpent: previousSpent,
-            saved: saved,
-            previousSaved: previousSaved,
-            month: month,
+            userID: userID,
             year: year,
-            userId: userId
+            month: month,
+            totalIncome: totalIncome,
+            totalExpenses: totalExpenses,
+            netSavings: netSavings
         )
     }
     
     var asDictionary: [String: Any] {
         [
-            "spent": spent,
-            "previousSpent": previousSpent,
-            "saved": saved,
-            "previousSaved": previousSaved,
-            "month": month,
+            "userID": userID,
             "year": year,
-            "userId": userId
+            "month": month,
+            "totalIncome": totalIncome,
+            "totalExpenses": totalExpenses,
+            "netSavings": netSavings,
         ]
     }
 } 

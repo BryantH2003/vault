@@ -136,7 +136,7 @@ class DebugService {
     }
     
     private func createDummyExpenses(forUserID userId: UUID, categories: [Category], otherUsers: [User]) async throws {
-        let categoryService = CategoryService()
+        let categoryService = CategoryService.shared
         
         let expenses = try await [
             Expense(
@@ -227,8 +227,7 @@ class DebugService {
     }
     
     private func createDummyFixedExpenses(forUserID userId: UUID, categories: [Category]) async throws {
-        
-        let categoryService = CategoryService()
+        let categoryService = CategoryService.shared
         
         let fixedExpenses = try await [
             FixedExpense(
