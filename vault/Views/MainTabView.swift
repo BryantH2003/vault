@@ -35,7 +35,7 @@ struct MainTabView: View {
                 }
                 
                 NavigationStack {
-//                    AnalyticsView(userID: user.id)
+                    AnalyticsView(userID: user.id)
                 }
                 .tabItem {
                     Label("Analytics", systemImage: "chart.bar.fill")
