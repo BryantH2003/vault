@@ -12,7 +12,7 @@ struct OverviewSummaryRow: View {
     let previousAmount: Double
     
     private var percentageChange: Double {
-        guard previousAmount != 0 else { return 0 }
+        guard previousAmount != 0 else { return amount }
         return ((amount - previousAmount) / previousAmount) * 100
     }
     
@@ -28,6 +28,11 @@ struct OverviewSummaryRow: View {
                     .secondaryTitleStyle()
                 Text(amount, format: .currency(code: "USD"))
                     .largeNumberStyle()
+                
+                if (title == "Expenses") {
+                    Text("Left to spend: ")
+                        .secondaryTitleStyle()
+                }
             }
             
             Spacer()

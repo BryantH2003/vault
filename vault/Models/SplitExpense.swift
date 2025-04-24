@@ -3,17 +3,20 @@ import Foundation
 /// Represents a split expense between users in the application
 struct SplitExpense: Identifiable, Codable, Hashable {
     let id: UUID
+    let expenseID: UUID
     var expenseDescription: String
     var totalAmount: Double
     var creatorID: UUID
     var creationDate: Date
     
     init(id: UUID = UUID(),
+         expenseID: UUID,
          expenseDescription: String,
          totalAmount: Double,
          creatorID: UUID,
          creationDate: Date = Date()) {
         self.id = id
+        self.expenseID = expenseID
         self.expenseDescription = expenseDescription
         self.totalAmount = totalAmount
         self.creatorID = creatorID
@@ -22,6 +25,7 @@ struct SplitExpense: Identifiable, Codable, Hashable {
     
     enum CodingKeys: String, CodingKey {
         case id
+        case expenseID
         case expenseDescription
         case totalAmount
         case creatorID
@@ -36,6 +40,12 @@ struct SplitExpense: Identifiable, Codable, Hashable {
             self.id = UUID(uuidString: idString) ?? UUID()
         } else {
             self.id = try container.decode(UUID.self, forKey: .id)
+        }
+        
+        if let expenseIDString = try? container.decode(String.self, forKey: .expenseID) {
+            self.expenseID = UUID(uuidString: expenseIDString) ?? UUID()
+        } else {
+            self.expenseID = try container.decode(UUID.self, forKey: .expenseID)
         }
 
         if let creatorIDString = try? container.decode(String.self, forKey: .creatorID) {
@@ -54,6 +64,7 @@ struct SplitExpense: Identifiable, Codable, Hashable {
         
         // Encode UUIDs as strings
         try container.encode(id.uuidString, forKey: .id)
+        try container.encode(expenseID.uuidString, forKey: .expenseID)
         try container.encode(expenseDescription, forKey: .expenseDescription)
         try container.encode(totalAmount, forKey: .totalAmount)
         try container.encode(creatorID.uuidString, forKey: .creatorID)

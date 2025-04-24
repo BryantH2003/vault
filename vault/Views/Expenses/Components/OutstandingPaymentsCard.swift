@@ -19,8 +19,6 @@ struct OutstandingPaymentsCard: View {
                 // Regular Outstanding Payments Section
                 if !outstandingPayments.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Bills & Recurring Payments")
-                            .cardTitleStyle()
                         
                         ForEach(outstandingPayments.sorted { $0.dueDate < $1.dueDate }) { payment in
                             OutstandingPaymentRow(
@@ -32,6 +30,7 @@ struct OutstandingPaymentsCard: View {
                                 Divider()
                             }
                         }
+                        
                     }
                 }
             }
@@ -40,6 +39,7 @@ struct OutstandingPaymentsCard: View {
     }
 }
 
+// TODO: REWORD DESIGN
 private struct OutstandingPaymentRow: View {
     let payment: OutstandingPayment
     let category: Category?

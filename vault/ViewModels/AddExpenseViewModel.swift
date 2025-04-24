@@ -10,6 +10,11 @@ enum ExpenseType {
     case regular
     case fixed
     case shared
+    
+    enum SplitType {
+        case even
+        case custom
+    }
 }
 
 @MainActor
@@ -37,6 +42,12 @@ class AddExpenseViewModel: ObservableObject {
     @Published var isLoadingUsers = false
     @Published var searchQuery = ""
     @Published var filteredUsers: [User] = []
+    @Published var splitType: ExpenseType.SplitType = .even
+    @Published var showSplitSection = false
+    
+    // Custom split amounts
+    @Published var currentUserAmount: Double = 0.0
+    @Published private var participantAmounts: [UUID: Double] = [:]
     
     private let categoryService = CategoryService.shared
     private let expenseService = ExpenseService.shared
@@ -65,14 +76,10 @@ class AddExpenseViewModel: ObservableObject {
     }
     
     var isValid: Bool {
-        let baseValid = !title.isEmpty && amount > 0 && selectedCategoryID != nil
-        
-        switch expenseType {
-        case .regular, .fixed:
-            return baseValid
-        case .shared:
-            return baseValid && !selectedParticipants.isEmpty
-        }
+        !title.isEmpty &&
+        amount > 0 &&
+        selectedCategoryID != nil &&
+        (expenseType != .shared || (!selectedParticipants.isEmpty && isCustomAmountsValid()))
     }
     
     func loadCategories() async {
@@ -122,19 +129,119 @@ class AddExpenseViewModel: ObservableObject {
     
     func filterUsers() {
         if searchQuery.isEmpty {
-            filteredUsers = users
+            filteredUsers = []
         } else {
             filteredUsers = users.filter { user in
                 user.username.localizedCaseInsensitiveContains(searchQuery) ||
-                (user.fullName.localizedCaseInsensitiveContains(searchQuery))
+                user.fullName.localizedCaseInsensitiveContains(searchQuery)
             }
         }
     }
     
+    func toggleParticipant(_ userID: UUID) {
+        if !selectedParticipants.contains(userID) {
+            selectedParticipants.insert(userID)
+            showSplitSection = true // Show split section when first friend is added
+            updateAmountsForSplitType()
+        }
+    }
+    
+    func removeParticipant(_ userID: UUID) {
+        // Get the amount that was allocated to this participant before removing
+        let allocatedAmount = participantAmounts[userID] ?? 0
+        
+        // Remove the participant
+        selectedParticipants.remove(userID)
+        participantAmounts.removeValue(forKey: userID)
+        
+        if splitType == .even {
+            // Recalculate even split
+            updateAmountsForSplitType()
+        } else {
+            // For custom split, we don't automatically redistribute the freed amount
+            // It will show up in the remaining amount to allocate
+        }
+    }
+    
+    func updateAmountsForSplitType() {
+        switch splitType {
+        case .even:
+            let totalParticipants = selectedParticipants.count + 1 // +1 for current user
+            let amountPerPerson = (amount * 100).rounded() / 100 / Double(totalParticipants)
+            
+            currentUserAmount = amountPerPerson
+            for participantID in selectedParticipants {
+                participantAmounts[participantID] = amountPerPerson
+            }
+            
+        case .custom:
+            // Keep existing amounts if they're valid, otherwise reset to 0
+            if !isCustomAmountsValid() {
+                currentUserAmount = 0
+                for participantID in selectedParticipants {
+                    participantAmounts[participantID] = 0
+                }
+            }
+        }
+    }
+    
+    func distributeRemainingAmount() {
+        let remainingAmount = amount - getTotalCustomAmounts()
+        if remainingAmount <= 0 { return }
+        
+        // Find participants with 0 or no amount
+        var participantsToDistribute: [UUID] = []
+        for participantID in selectedParticipants {
+            if participantAmounts[participantID] ?? 0 == 0 {
+                participantsToDistribute.append(participantID)
+            }
+        }
+        
+        // Include current user if amount is 0
+        let currentUserPlaceholder = UUID()
+        if currentUserAmount == 0 {
+            participantsToDistribute.append(currentUserPlaceholder)
+        }
+        
+        if participantsToDistribute.isEmpty { return }
+        
+        // Distribute remaining amount evenly
+        let amountPerPerson = (remainingAmount * 100).rounded() / 100 / Double(participantsToDistribute.count)
+        
+        for participantID in participantsToDistribute {
+            if participantID == currentUserPlaceholder {
+                currentUserAmount = amountPerPerson
+            } else {
+                participantAmounts[participantID] = amountPerPerson
+            }
+        }
+    }
+    
+    func getParticipantAmountBinding(for userID: UUID) -> Binding<Double> {
+        Binding(
+            get: { self.participantAmounts[userID] ?? 0.0 },
+            set: { newValue in
+                // Limit to 2 decimal places
+                self.participantAmounts[userID] = (newValue * 100).rounded() / 100
+            }
+        )
+    }
+    
+    func getTotalCustomAmounts() -> Double {
+        let participantsTotal = participantAmounts.values.reduce(0, +)
+        return ((currentUserAmount + participantsTotal) * 100).rounded() / 100
+    }
+    
+    func isCustomAmountsValid() -> Bool {
+        if splitType == .even { return true }
+        return abs(getTotalCustomAmounts() - amount) < 0.01
+    }
+    
     func saveExpense(userID: UUID) async -> Bool {
-        guard isValid, let categoryID = selectedCategoryID else { return false }
+        guard let categoryID = selectedCategoryID else { return false }
         
         isSaving = true
+        
         do {
             switch expenseType {
             case .regular:
@@ -155,8 +262,9 @@ class AddExpenseViewModel: ObservableObject {
                     title: title,
                     amount: amount,
                     dueDate: date,
+                    transactionDate: Date(),
                     recurrenceInterval: recurrenceInterval,
-                    recurringUnit: recurrenceUnit.rawValue.lowercased()
+                    recurringUnit: recurrenceUnit.rawValue
                 )
                 _ = try await fixedExpenseService.createFixedExpense(fixedExpense)
                 
@@ -165,7 +273,7 @@ class AddExpenseViewModel: ObservableObject {
                     userID: userID,
                     categoryID: categoryID,
                     title: title,
-                    amount: amount,
+                    amount: currentUserAmount,
                     transactionDate: date,
                     vendor: vendor.isEmpty ? nil : vendor
                 )
@@ -174,36 +282,25 @@ class AddExpenseViewModel: ObservableObject {
                 
                 // Create split expense
                 let splitExpense = SplitExpense(
+                    expenseID: savedExpense.id,
                     expenseDescription: title,
                     totalAmount: amount,
-                    creatorID: userID
+                    creatorID: userID,
+                    creationDate: date
                 )
                 
                 let savedSplitExpense = try await splitExpenseService.createSplitExpense(splitExpense)
                 
-                // Calculate amount per person (including the creator)
-                let totalParticipants = selectedParticipants.count + 1
-                let amountPerPerson = amount / Double(totalParticipants)
-                
-                // Create participants (including the creator)
+                // Create participants
                 for participantID in selectedParticipants {
                     let participant = SplitExpenseParticipant(
                         splitID: savedSplitExpense.id,
                         userID: participantID,
-                        amountDue: amountPerPerson,
+                        amountDue: participantAmounts[participantID] ?? (amount / Double(selectedParticipants.count + 1)),
                         status: SplitExpenseParticipant.PaymentStatus.pending.rawValue
                     )
                     try await splitExpenseParticipantService.createParticipant(participant)
                 }
-                
-                // Add creator as a participant
-                let creatorParticipant = SplitExpenseParticipant(
-                    splitID: savedSplitExpense.id,
-                    userID: userID,
-                    amountDue: amountPerPerson,
-                    status: SplitExpenseParticipant.PaymentStatus.paid.rawValue
-                )
-                try await splitExpenseParticipantService.createParticipant(creatorParticipant)
             }
             
             return true
@@ -212,14 +309,6 @@ class AddExpenseViewModel: ObservableObject {
             showError = true
             isSaving = false
             return false
-        }
-    }
-    
-    func toggleParticipant(_ userID: UUID) {
-        if selectedParticipants.contains(userID) {
-            selectedParticipants.remove(userID)
-        } else {
-            selectedParticipants.insert(userID)
         }
     }
 }

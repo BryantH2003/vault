@@ -18,6 +18,7 @@ class DashboardViewModel: ObservableObject {
     @Published var splitExpensesOwedToYouList: [SplitExpense] = []
     @Published var splitExpensesList: [(expense: SplitExpense, participants: [SplitExpenseParticipant])] = []
     @Published var splitParticipants: [UUID: [SplitExpenseParticipant]] = [:]
+    @Published var splitIDList: [UUID] = []
     @Published var users: [UUID: User] = [:]
     
     @Published var recentExpensesList: [Expense] = []
@@ -87,7 +88,10 @@ class DashboardViewModel: ObservableObject {
             // Load participants for each split expense
             for expense in allSplitExpenses {
                 let participants = try await splitExpenseParticipantService.getParticipants(forExpenseID: expense.id)
+                
                 var relevantParticipant: [SplitExpenseParticipant] = []
+                
+                splitIDList.append(expense.expenseID)
                 
                 // If you are the creator of the split expense
                 if expense.creatorID == userID {
@@ -101,6 +105,7 @@ class DashboardViewModel: ObservableObject {
                     for participant in participants {
                         
                         if participant.userID == userID {
+                            
                             relevantParticipant.append(participant)
                             break
                         }
@@ -135,10 +140,10 @@ class DashboardViewModel: ObservableObject {
             let monthlyExpensesList = try await expenseService.getExpensesInDateRange(forUserID: userID, in: startDate...endDate)
             
             monthlyExpensesTotal = monthlyExpensesList.reduce(0) { $0 + $1.amount }
-            
+
             let fixedExpensesList = try await fixedExpenseService.getFixedExpensesDateRange(forUserID: userID, in: startDate...endDate)
             
-            monthlyExpensesTotal = fixedExpensesList.reduce(0) { $0 + $1.amount }
+            monthlyExpensesTotal += fixedExpensesList.reduce(0) { $0 + $1.amount }
     
     // --------------------------------------------------------------
     
@@ -152,7 +157,7 @@ class DashboardViewModel: ObservableObject {
             // Load previous month expenses
             let prevFixedExpensesList = try await fixedExpenseService.getFixedExpensesDateRange(forUserID: userID, in: previousStartDate...previousEndDate)
             
-            previousMonthExpensesTotal = prevFixedExpensesList.reduce(0) { $0 + $1.amount }
+            previousMonthExpensesTotal += prevFixedExpensesList.reduce(0) { $0 + $1.amount }
 
     // --------------------------------------------------------------
 
@@ -187,7 +192,6 @@ class DashboardViewModel: ObservableObject {
                 .prefix(5))
     
     // --------------------------------------------------------------
-
             
         } catch {
             print("Error loading dashboard data: \(error.localizedDescription)")
