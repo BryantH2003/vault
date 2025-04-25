@@ -35,13 +35,23 @@ struct AnalyticsView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                // Timeframe Selector
-                Picker("Timeframe", selection: $viewModel.timeframeOption) {
-                    Text("Monthly").tag(TimeframeOption.monthly)
-                    Text("Yearly").tag(TimeframeOption.yearly)
-                }
-                .pickerStyle(.segmented)
-                .padding(.horizontal)
+                // Chart Controls
+                AnalyticsChartControls(
+                    timeframeOption: $viewModel.timeframeOption,
+                    isLoading: viewModel.isLoading,
+                    onPrevious: {
+                        viewModel.previousTimeframe()
+                        Task {
+                            await viewModel.loadData(forUserID: userID)
+                        }
+                    },
+                    onNext: {
+                        viewModel.nextTimeframe()
+                        Task {
+                            await viewModel.loadData(forUserID: userID)
+                        }
+                    }
+                )
                 
                 if viewModel.isLoading {
                     ProgressView()
@@ -51,57 +61,28 @@ struct AnalyticsView: View {
                         .frame(height: 300)
                 } else {
                     // Chart
-                    ChartView(
+                    AnalyticsBarChart(
                         data: viewModel.chartData,
                         selectedTimeframe: viewModel.timeframeOption,
                         selectedDataTypes: selectedDataTypes,
                         selectedBarData: $selectedBarData
                     )
-                    .frame(height: 300)
                     .padding()
                 }
                 
                 // Legend
-                LegendView(selectedDataTypes: $selectedDataTypes)
-                    .padding(.horizontal)
-                
-                // Navigation Arrows
-                HStack {
-                    Button(action: {
-                        viewModel.previousTimeframe()
-                        Task {
-                            await viewModel.loadData(forUserID: userID)
-                        }
-                    }) {
-                        Image(systemName: "chevron.left")
-                            .font(.title2)
-                    }
-                    .disabled(viewModel.isLoading)
-                    
-                    Spacer()
-                    
-                    Button(action: {
-                        viewModel.nextTimeframe()
-                        Task {
-                            await viewModel.loadData(forUserID: userID)
-                        }
-                    }) {
-                        Image(systemName: "chevron.right")
-                            .font(.title2)
-                    }
-                    .disabled(viewModel.isLoading)
-                }
-                .padding(.horizontal, 40)
+                AnalyticsLegend(selectedDataTypes: $selectedDataTypes)
                 
                 // Selected Bar Details
                 if let selectedData = selectedBarData {
-                    SelectedBarDetailView(data: selectedData)
-                        .padding()
+                    AnalyticsBarDetails(data: selectedData)
                         .transition(.opacity)
                 }
             }
-            .padding(.vertical)
+            .cardBackground()
+            .padding()
         }
+        .appBackground()
         .navigationTitle("Analytics")
         .task {
             await viewModel.loadData(forUserID: userID)
@@ -131,78 +112,6 @@ private struct ErrorView: View {
                 .multilineTextAlignment(.center)
         }
         .padding()
-    }
-}
-
-// MARK: - Chart View
-private struct ChartView: View {
-    let data: [BarData]
-    let selectedTimeframe: TimeframeOption
-    let selectedDataTypes: Set<DataType>
-    @Binding var selectedBarData: BarData?
-    
-    var body: some View {
-        Chart {
-            ForEach(data.suffix(4)) { item in
-                if selectedDataTypes.contains(.income) {
-                    BarMark(
-                        x: .value("Period", item.period),
-                        y: .value("Income", item.income)
-                    )
-                    .foregroundStyle(DataType.income.color)
-                }
-                
-                if selectedDataTypes.contains(.expenses) {
-                    BarMark(
-                        x: .value("Period", item.period),
-                        y: .value("Expenses", item.expenses)
-                    )
-                    .foregroundStyle(DataType.expenses.color)
-                }
-                
-                if selectedDataTypes.contains(.savings) {
-                    BarMark(
-                        x: .value("Period", item.period),
-                        y: .value("Savings", item.savings)
-                    )
-                    .foregroundStyle(DataType.savings.color)
-                }
-            }
-        }
-        .chartXAxis {
-            AxisMarks { _ in
-                AxisValueLabel()
-            }
-        }
-        .chartYAxis {
-            AxisMarks { value in
-                AxisValueLabel {
-                    if let doubleValue = value.as(Double.self) {
-                        Text(doubleValue, format: .currency(code: "USD"))
-                    }
-                }
-            }
-        }
-        .chartOverlay { proxy in
-            GeometryReader { geometry in
-                Rectangle()
-                    .fill(.clear)
-                    .contentShape(Rectangle())
-                    .gesture(
-                        DragGesture(minimumDistance: 0)
-                            .onChanged { value in
-                                let x = value.location.x - geometry[proxy.plotAreaFrame].origin.x
-                                guard let index = proxy.value(atX: x, as: String.self) else { return }
-                                if let barData = data.first(where: { $0.period == index }) {
-                                    selectedBarData = barData
-                                }
-                            }
-                            .onEnded { _ in
-                                selectedBarData = nil
-                            }
-                    )
-            }
-        }
     }
 }
 

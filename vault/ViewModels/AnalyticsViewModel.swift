@@ -6,6 +6,7 @@ struct BarData: Identifiable {
     let income: Double
     let expenses: Double
     let savings: Double
+    let date: Date // Adding date for sorting and window management
 }
 
 @MainActor
@@ -21,23 +22,22 @@ class AnalyticsViewModel: ObservableObject {
     private let fixedExpenseService = FixedExpenseService.shared
     
     // Cache structure
-    private var cache: [String: [BarData]] = [:]
+    private var cache: [String: BarData] = [:]
     private let cacheTimeout: TimeInterval = 300 // 5 minutes
     private var lastCacheUpdate: [String: Date] = [:]
     
-    private func cacheKey(forUserID userID: UUID, timeframe: TimeframeOption, date: Date) -> String {
+    // Window management
+    private let displayWindow = 4 // Number of periods to display
+    private let preloadWindow = 1 // Number of periods to preload on each side
+    
+    private func cacheKey(forUserID userID: UUID, date: Date) -> String {
         let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM"
-        return "\(userID)-\(timeframe)-\(dateFormatter.string(from: date))"
+        dateFormatter.dateFormat = timeframeOption == .monthly ? "yyyy-MM" : "yyyy"
+        return "\(userID)-\(dateFormatter.string(from: date))"
     }
     
     private func isCacheValid(forKey key: String) -> Bool {
-        guard let lastUpdate = lastCacheUpdate[key],
-              let cachedData = cache[key],
-              !cachedData.isEmpty else {
-            return false
-        }
-        
+        guard let lastUpdate = lastCacheUpdate[key] else { return false }
         return Date().timeIntervalSince(lastUpdate) < cacheTimeout
     }
     
@@ -45,50 +45,58 @@ class AnalyticsViewModel: ObservableObject {
         isLoading = true
         error = nil
         
-        let cacheKey = cacheKey(forUserID: userID, timeframe: timeframeOption, date: currentStartDate)
-        
-        if isCacheValid(forKey: cacheKey) {
-            chartData = cache[cacheKey] ?? []
-            isLoading = false
-            return
-        }
-        
         do {
             let calendar = Calendar.current
-            var startDate: Date
-            var endDate: Date
+            var startDate = currentStartDate
+            
+            // Calculate the window range
+            let totalWindowSize = displayWindow + (2 * preloadWindow)
+            let windowStartOffset = -(preloadWindow + displayWindow - 1)
             
             if timeframeOption == .monthly {
-                startDate = calendar.date(byAdding: .month, value: -11, to: calendar.startOfMonth(for: currentStartDate)) ?? currentStartDate
-                endDate = calendar.endOfMonth(for: currentStartDate)
+                startDate = calendar.date(byAdding: .month, value: windowStartOffset, to: calendar.startOfMonth(for: currentStartDate)) ?? currentStartDate
             } else {
-                startDate = calendar.date(byAdding: .year, value: -11, to: calendar.startOfYear(for: currentStartDate)) ?? currentStartDate
-                endDate = calendar.endOfYear(for: currentStartDate)
+                startDate = calendar.date(byAdding: .year, value: windowStartOffset, to: calendar.startOfYear(for: currentStartDate)) ?? currentStartDate
             }
             
             var newChartData: [BarData] = []
             var currentDate = startDate
             
-            while currentDate <= endDate {
-                let periodEndDate = timeframeOption == .monthly 
-                    ? calendar.endOfMonth(for: currentDate)
-                    : calendar.endOfYear(for: currentDate)
+            // Load data for the window plus preload periods
+            for _ in 0..<totalWindowSize {
+                let periodKey = cacheKey(forUserID: userID, date: currentDate)
                 
-                let income = try await loadIncome(forUserID: userID, from: currentDate, to: periodEndDate)
-                let (expenses, fixedExpenses) = try await loadExpenses(forUserID: userID, from: currentDate, to: periodEndDate)
-                let totalExpenses = expenses + fixedExpenses
-                let savings = income - totalExpenses
+                let barData: BarData
+                if isCacheValid(forKey: periodKey), let cachedData = cache[periodKey] {
+                    barData = cachedData
+                } else {
+                    let periodEndDate = timeframeOption == .monthly 
+                        ? calendar.endOfMonth(for: currentDate)
+                        : calendar.endOfYear(for: currentDate)
+                    
+                    let income = try await loadIncome(forUserID: userID, from: currentDate, to: periodEndDate)
+                    let (expenses, fixedExpenses) = try await loadExpenses(forUserID: userID, from: currentDate, to: periodEndDate)
+                    let totalExpenses = expenses + fixedExpenses
+                    let savings = income - totalExpenses
+                    
+                    let periodFormatter = DateFormatter()
+                    periodFormatter.dateFormat = timeframeOption == .monthly ? "MMM yyyy" : "yyyy"
+                    let period = periodFormatter.string(from: currentDate)
+                    
+                    barData = BarData(
+                        period: period,
+                        income: income,
+                        expenses: totalExpenses,
+                        savings: savings,
+                        date: currentDate
+                    )
+                    
+                    // Update cache
+                    cache[periodKey] = barData
+                    lastCacheUpdate[periodKey] = Date()
+                }
                 
-                let periodFormatter = DateFormatter()
-                periodFormatter.dateFormat = timeframeOption == .monthly ? "MMM yyyy" : "yyyy"
-                let period = periodFormatter.string(from: currentDate)
-                
-                newChartData.append(BarData(
-                    period: period,
-                    income: income,
-                    expenses: totalExpenses,
-                    savings: savings
-                ))
+                newChartData.append(barData)
                 
                 // Move to next period
                 if timeframeOption == .monthly {
@@ -98,16 +106,25 @@ class AnalyticsViewModel: ObservableObject {
                 }
             }
             
-            // Update cache
-            cache[cacheKey] = newChartData
-            lastCacheUpdate[cacheKey] = Date()
+            // Clean up old cache entries
+            cleanCache()
             
-            chartData = newChartData
+            // Update the chart with the display window (excluding preload data)
+            chartData = Array(newChartData.dropFirst(preloadWindow).prefix(displayWindow))
             isLoading = false
             
         } catch {
             self.error = error
             isLoading = false
+        }
+    }
+    
+    private func cleanCache() {
+        let now = Date()
+        let expiredKeys = lastCacheUpdate.filter { now.timeIntervalSince($0.value) > cacheTimeout }.keys
+        expiredKeys.forEach { key in
+            cache.removeValue(forKey: key)
+            lastCacheUpdate.removeValue(forKey: key)
         }
     }
     
